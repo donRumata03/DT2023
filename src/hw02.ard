@@ -1,14 +1,32 @@
 \import Data.Bool
 \import Data.Or
 \import Logic
+\import lect02 (List, cons, nil)
 
 -- 1. Определите полиморфный tail для списков.
+\func tail {A : \Type} (l : List A) : List A
+  | List.nil => List.nil
+  | cons a l1 => l1
 
 -- 2. Реализуйте любой (but choose wisely) алгоритм сортировки. Функцию сравнения можно принимать в качестве аргумента.
+\func sort {A : \Type} (l : List A) (comparator : A -> A -> Bool) : List A \elim l -- Comparator a b ~> true <=> a < b
+  | nil => nil
+  | cons a t => insert a t comparator
+  \where {
+    \func insert {A : \Type} (e : A) (list : List A) (comparator : A -> A -> Bool) : List A \elim list
+      | nil => cons e nil
+      | cons a list => \case comparator e a \with {
+        | false => cons a (insert e list comparator)
+        | true => cons e (cons a list)
+      }
+  }
+
 
 -- 3. Докажите ассоциативность && и ||.
 
-\func &&-assoc (x y z : Bool) : (x and y) and z = x and (y and z) => {?}
+\func &&-assoc (x y z : Bool) : (x and y) and z = x and (y and z) \elim z
+  | false => {?}
+  | true => {?}
 
 \func ||-assoc (x y z : Bool) : (x or y) or z = x or (y or z) => {?}
 
@@ -17,10 +35,13 @@
 -- 5. Докажите следующие пропозициональные тавтологии (choose 2 out of 3).
 
 -- t1 : (P and Q -> R) -> P -> Q -> R
-\func t1 {P Q R : \Type} (f : \Sigma P Q -> R) (p : P) (q : Q) : R => {?}
+\func t1 {P Q R : \Type} (f : \Sigma P Q -> R) (p : P) (q : Q) : R
+  => f (p, q)
 
 -- t2 : (P -> R) -> (Q -> R) -> P or Q -> R
-\func t2 {P Q R : \Type} (f : P -> R) (g : Q -> R) (h : Or P Q) : R => {?}
+\func t2 {P Q R : \Type} (f : P -> R) (g : Q -> R) (h : Or P Q) : R \elim h
+  | inl a => f a
+  | inr b => g b
 
 -- t3 : ((P -> Q -> R) -> P) -> (P -> R) -> R
 \func t3 {P Q R : \Type} (f : (P -> Q -> R) -> P) (g : P -> R) : R => {?}
@@ -34,10 +55,10 @@
 -- 7. Докажите следующие утверждения.
 
 -- s1 : Если для любого x : Nat верно P(x), то существует x : Nat для которого P(x) верно.
-\func s1 (P : Nat -> \Type) (h : \Pi (x : Nat) -> P x) : \Sigma (x : Nat) (P x) => {?}
+\func s1 (P : Nat -> \Type) (h : \Pi (x : Nat) -> P x) : \Sigma (x : Nat) (P x) => (0, h 0)
 
 -- s2 : Если не существует x : Nat такого, что верно P(x), то P(3) не верно.
-\func s2 (P : Nat -> \Type) (h : \Sigma (x : Nat) (P x) -> Empty) : P 3 -> Empty => {?}
+\func s2 (P : Nat -> \Type) (h : \Sigma (x : Nat) (P x) -> Empty) : P 3 -> Empty => h (3, P 3)
 
 -- 8. Сформулируйте и докажите следующие утверждения.
 
