@@ -35,52 +35,15 @@
   | false => Or.inr idp
   | true => Or.inl idp
 
-\func &&-assoc (x y z : Bool) : (x and y) and z = x and (y and z) =>
---  | true, true, true => idp
---  | true, true, false => idp
---  | true, false, true => idp
---  | true, false, false => idp
---  | false, true, true => idp
---  | false, true, false => idp
---  | false, false, true => idp
---  | false, false, false => idp
-  -- Alternative proof:
-  \case (boolIsTrueOrFalse ((x and y) and z)) \with {
-    | Or.inl p => p *> (inv $ leftToRight p)
-    | Or.inr p => {?}
-  }
-  \where {
-
-    \func leftToSigma (x y z : Bool) (p : (x and y) and z = true) : \Sigma (x = true) (y = true) (z = true) =>
-      \let (xAndYIsTrue : (x and y) = true, zIsTrue : z = true) => and.toSigma p \in
-        \let (xIsTrue, yIsTrue) => and.toSigma xAndYIsTrue \in (xIsTrue, yIsTrue, zIsTrue)
-
-    \func rightToSigma (x y z : Bool) (p : x and (y and z) = true) : \Sigma (x = true) (y = true) (z = true) =>
-        \let (xIsTrue : x = true, yAndZIsTrue : y and z = true) => and.toSigma p \in
-            \let (yIsTrue, zIsTrue) => and.toSigma yAndZIsTrue \in (xIsTrue, yIsTrue, zIsTrue)
-
-    \func leftFromSigma (x y z : Bool) (p : \Sigma (x = true) (y = true) (z = true)) : (x and y) and z = true =>
-      \let (xIsTrue, yIsTrue, zIsTrue) => p \in
-        and.fromSigma (and.fromSigma (xIsTrue, yIsTrue), zIsTrue)
-
-    \func rightFromSigma (x y z : Bool) (p : \Sigma (x = true) (y = true) (z = true)) : x and (y and z) = true =>
-        \let (xIsTrue, yIsTrue, zIsTrue) => p \in
-            and.fromSigma (xIsTrue, and.fromSigma (yIsTrue, zIsTrue))
-
-
-    \func leftToRight {x y z : Bool} (p : (x and y) and z = true) : x and (y and z) = true =>
-        rightFromSigma x y z $ leftToSigma x y z p
-
-    \func rightToLeft {x y z : Bool} (p : x and (y and z) = true) : (x and y) and z = true =>
-        leftFromSigma x y z $ rightToSigma x y z p
-
-
-    \func leftToRight' (x y z : Bool) (p : (x and y) and z = false) : x and (y and z) = false =>
-        {?}
-
-    \func rightToLeft' (x y z : Bool) (p : x and (y and z) = false) : (x and y) and z = false =>
-        {?}
-  }
+\func &&-assoc (x y z : Bool) : (x and y) and z = x and (y and z)
+  | true, true, true => idp
+  | true, true, false => idp
+  | true, false, true => idp
+  | true, false, false => idp
+  | false, true, true => idp
+  | false, true, false => idp
+  | false, false, true => idp
+  | false, false, false => idp
 
 \func ||-assoc (x y z : Bool) : (x or y) or z = x or (y or z)
   | true, true, true => idp
