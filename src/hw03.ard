@@ -36,7 +36,9 @@
 -- repl говорит, что если у нас есть два равных типа, то у нас есть функция из одного во второй.
 -- Определите repl через transport.
 
-\func repl {A B : \Type} (p : A = B) (a : A) : B => {?}
+\func repl {A B : \Type} (p : A = B) (a : A) : B \elim p
+  | idp => a
+
 
 -- Определите transport через repl и pmap.
 
