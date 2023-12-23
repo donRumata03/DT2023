@@ -1,28 +1,99 @@
+\import Algebra.Meta
+\import Arith.Nat
 \import Data.List
-\open Nat(+,*)
+\import Function.Meta
+\import Meta
+\import Paths
+\import Paths.Meta
+\import lect03 (+-comm, fileTest, M5)
+\open Nat (+, *)
 
 -- 1. Чему равно fileTest (в нормальной форме)? Докажите это.
 
+\func fileTestResult : fileTest = (17, 8, 13, 55, 18, 21) => idp
+
 -- 2. Чему равно M5.t''' (в нормальной форме)? Докажите это.
+
+\func M5t''' : M5.t''' = ((82, 42, 61, 82, 34, 42, 61, 29), 25, (42, 29)) => idp
 
 -- 3. Докажите ассоциативность ++.
 
-\func ++-assoc {A : \Type} (xs ys zs : List A) : (xs ++ ys) ++ zs = xs ++ (ys ++ zs) => {?}
+\func ++-assoc {A : \Type} (xs ys zs : List A) : (xs ++ ys) ++ zs = xs ++ (ys ++ zs) \elim xs
+  | nil => idp
+  | x :: xs => pmap (x :: ) (++-assoc xs ys zs)
 
 -- 4. Докажите, что reverse (reverse xs) = xs, где reverse определен через ++.
 
 \func reverse {A : \Type} (xs : List A) : List A
   | nil => nil
-  | :: x xs => reverse xs ++ x :: nil
+  | x :: xs => reverse xs ++ x :: nil
 
 -- Это утверждение будет полезно для доказательства.
-\func reverse++ {A : \Type} (xs ys : List A) : reverse (xs ++ ys) = reverse ys ++ reverse xs => {?}
 
-\func reverse-isInvolutive {A : \Type} (xs : List A) : reverse (reverse xs) = xs => {?}
+\func reverse++ {A : \Type} (xs ys : List A) : reverse (xs ++ ys) = reverse ys ++ reverse xs \elim xs
+  | nil => ++nil-isId (reverse ys)
+  | x :: xs =>
+    reverse ((x :: xs) ++ ys)                 ==< idp >==
+    reverse (x :: (xs ++ ys))                 ==< idp >==
+    reverse (xs ++ ys) ++ x :: nil            ==< pmap (\lam l => l ++ x :: nil) (reverse++ xs ys) >==
+    (reverse ys ++ reverse xs) ++ x :: nil    ==< ++-assoc (reverse ys) (reverse xs) (x :: nil) >==
+    (reverse ys ++ (reverse xs ++ x :: nil))  ==< idp >==
+    reverse ys ++ reverse (x :: xs)  `qed
+
+  \where {
+    \func ++nil-isId {A : \Type} (l : List A) : l = l ++ nil \elim l
+      | nil => idp
+      | x :: xs => pmap (x :: ) (++nil-isId xs)
+  }
+
+\func reverse-isInvolutive {A : \Type} (xs : List A) : reverse (reverse xs) = xs \elim xs
+  | nil => idp
+  | x :: xs =>
+    reverse (reverse (x :: xs))                    ==< idp >==
+    reverse (reverse xs ++ x :: nil)               ==< reverse++ (reverse xs) (x :: nil) >==
+    reverse (x :: nil) ++ reverse (reverse xs)     ==< pmap (\lam l => x :: nil ++ l) (reverse-isInvolutive xs) >==
+    x :: xs                                        `qed
+
 
 -- 5. Докажите дистрибутивность умножения над сложением для натуральных чисел.
 
-\func rdistr (n m k : Nat) : (m + k) * n = m * n + k * n => {?}
+\import lect03 (+-assoc \as +-assoc')
+\func +-assoc {n m k : Nat} : (n + m) + k = n + (m + k) => +-assoc' n m k
+
+\func rdistr (n m k : Nat) : (m + k) * n = m * n + k * n \elim n
+  | zero => idp -- (m + k) * 0 = m * 0 + k * 0
+  | suc n => -- pmap {?} (rdistr n m k)
+    (m + k) * suc n           ==< idp >== -- Definition of multiplication
+    (m + k) * n + (m + k)     ==< later (rewrite (rdistr n m k) idp) >== -- Induction hypothesis
+    (m * n + k * n) + (m + k) ==< +-assoc  >== -- Associativity of addition
+    m * n + (k * n + (m + k)) ==< pmap (\lam i => m * n + i) (inv +-assoc) >== -- Associativity of addition
+    m * n + ((k * n + m) + k) ==< pmap (\lam i => m * n + (i + k)) (+-comm (k * n) m) >== -- Commutativity of addition
+    m * n + ((m + k * n) + k) ==< pmap (\lam i => m * n + i) +-assoc >== -- Associativity of addition
+    m * n + (m + (k * n + k)) ==< (inv $ +-assoc) >== -- Associativity of addition
+    (m * n + m) + (k * n + k) ==< pmap2 (\lam i j => i + j) (distrSuc m n) (distrSuc k n) >==
+    (m * suc n) + (k * suc n) `qed
+    \where {
+        \func distrSuc (m n : Nat) : m * n + m = (m * suc n) => idp
+    }
+
+-- Helper lemma to implement ldistr through rdistr
+\func *-comm (n m : Nat) : n * m = m * n \elim m
+  | zero => {?}
+  | suc m =>
+    n * suc m ==< idp >==
+    n * m + n ==< pmap (\lam i => i + n) (*-comm n m) >==
+    m * n + n ==< inv (*-comm-suc n m) >==
+    suc m * n `qed
+    \where {
+        \func *-comm-zero (n : Nat) : n * zero = zero \elim n
+          | zero => idp
+          | suc n => *-comm-zero n
+
+        \func *-comm-suc (n m : Nat) : n * suc m = n + n * m =>
+            n * suc m ==< idp >==
+            n * m + n ==< +-comm (n * m) n >==
+            n + n * m `qed
+    }
 
 \func ldistr (n m k : Nat) : n * (m + k) = n * m + n * k => {?}
 
@@ -36,10 +107,9 @@
 -- repl говорит, что если у нас есть два равных типа, то у нас есть функция из одного во второй.
 -- Определите repl через transport.
 
-\func repl {A B : \Type} (p : A = B) (a : A) : B \elim p
-  | idp => a
+\func repl {A B : \Type} (p : A = B) (a : A) : B => transport (\lam T => T) p a
 
 
 -- Определите transport через repl и pmap.
 
-\func transport' {A : \Type} (B : A -> \Type) {a a' : A} (p : a = a') (b : B a) : B a' => {?}
+\func transport' {A : \Type} (B : A -> \Type) {a a' : A} (p : a = a') (b : B a) : B a' => repl (pmap B p : B a = B a') b
