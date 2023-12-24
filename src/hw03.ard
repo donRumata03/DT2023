@@ -5,7 +5,7 @@
 \import Meta
 \import Paths
 \import Paths.Meta
-\import lect03 (+-comm, fileTest, M5)
+\import lect03 (+-comm \as +-comm', fileTest, M5)
 \open Nat (+, *)
 
 -- 1. Чему равно fileTest (в нормальной форме)? Докажите это.
@@ -57,17 +57,19 @@
 
 -- 5. Докажите дистрибутивность умножения над сложением для натуральных чисел.
 
+-- Helpers with implicit arguments
 \import lect03 (+-assoc \as +-assoc')
 \func +-assoc {n m k : Nat} : (n + m) + k = n + (m + k) => +-assoc' n m k
+\func +-comm {n m : Nat} : n + m = m + n => +-comm' n m
 
-\func rdistr (n m k : Nat) : (m + k) * n = m * n + k * n \elim n
+\func rdistr {n m k : Nat} : (m + k) * n = m * n + k * n \elim n
   | zero => idp -- (m + k) * 0 = m * 0 + k * 0
   | suc n => -- pmap {?} (rdistr n m k)
     (m + k) * suc n           ==< idp >== -- Definition of multiplication
-    (m + k) * n + (m + k)     ==< later (rewrite (rdistr n m k) idp) >== -- Induction hypothesis
+    (m + k) * n + (m + k)     ==< later (rewrite rdistr idp) >== -- Induction hypothesis
     (m * n + k * n) + (m + k) ==< +-assoc  >== -- Associativity of addition
     m * n + (k * n + (m + k)) ==< pmap (\lam i => m * n + i) (inv +-assoc) >== -- Associativity of addition
-    m * n + ((k * n + m) + k) ==< pmap (\lam i => m * n + (i + k)) (+-comm (k * n) m) >== -- Commutativity of addition
+    m * n + ((k * n + m) + k) ==< pmap (\lam i => m * n + (i + k)) (+-comm {k * n} {m}) >== -- Commutativity of addition
     m * n + ((m + k * n) + k) ==< pmap (\lam i => m * n + i) +-assoc >== -- Associativity of addition
     m * n + (m + (k * n + k)) ==< (inv $ +-assoc) >== -- Associativity of addition
     (m * n + m) + (k * n + k) ==< pmap2 (\lam i j => i + j) (distrSuc m n) (distrSuc k n) >==
@@ -77,30 +79,46 @@
     }
 
 -- Helper lemma to implement ldistr through rdistr
-\func *-comm (n m : Nat) : n * m = m * n \elim m
-  | zero => {?}
+\func *-comm {n m : Nat} : n * m = m * n \elim m
+  | zero => inv $ *-comm-zero n
   | suc m =>
     n * suc m ==< idp >==
-    n * m + n ==< pmap (\lam i => i + n) (*-comm n m) >==
-    m * n + n ==< inv (*-comm-suc n m) >==
+    n * m + n ==< pmap (\lam i => i + n) *-comm >==
+    m * n + n ==< inv *-comm-suc >==
     suc m * n `qed
     \where {
-        \func *-comm-zero (n : Nat) : n * zero = zero \elim n
+        \func *-comm-zero (n : Nat) : zero * n = zero \elim n
           | zero => idp
           | suc n => *-comm-zero n
 
-        \func *-comm-suc (n m : Nat) : n * suc m = n + n * m =>
-            n * suc m ==< idp >==
-            n * m + n ==< +-comm (n * m) n >==
-            n + n * m `qed
+        \func *-comm-suc {n m : Nat} : suc n * m = n * m + m \elim m
+          | 0 => idp
+          | suc m =>
+            suc n * suc m ==< idp >==
+            suc n * m + n + 1 ==< later (rewrite *-comm-suc idp) >==
+            n * m + m + n + 1 ==< later (rewrite +-assoc idp) >==
+            n * m + (m + n) + 1 ==< later (rewrite (+-comm {n} {m}) idp) >==
+            n * m + (n + m) + 1 ==< later (rewrite +-assoc idp) >==
+            n * m + n + m + 1 ==< idp >==
+            n * suc m + suc m `qed
+
     }
 
-\func ldistr (n m k : Nat) : n * (m + k) = n * m + n * k => {?}
+-- Apply commutativity to argument and result of `rdistr`
+\func ldistr (n m k : Nat) : n * (m + k) = n * m + n * k =>
+  n * (m + k) ==< *-comm >==
+  (m + k) * n ==< rdistr >==
+  m * n + k * n ==< pmap2 (\lam i j => i + j) *-comm *-comm >==
+  n * m + n * k `qed
 
 -- 6. Определите конгруэнтность для функций двух аргументов через transport.
 --    Можно использовать любые функции, определенные через transport.
 
-\func pmap2 {A B C : \Type} (f : A -> B -> C) {a a' : A} (p : a = a') {b b' : B} (q : b = b') : f a b = f a' b' => {?}
+\func pmap2 {A B C : \Type} (f : A -> B -> C) {a a' : A} (p : a = a') {b b' : B} (q : b = b') : f a b = f a' b' =>
+  -- NOTE: transitivity can also be defined through transport,so the usage of equational reasoning pattern is legal
+  f a b ==< pmap (\lam x => f x b) p >==  -- The same applies to pmap
+  f a' b ==< pmap (\lam x => f a' x) q >==
+  f a' b' `qed
 
 -- 7. Докажите, что transport выражается через pmap и repl и наоборот.
 
