@@ -6,7 +6,7 @@
 \import Meta
 \import hw01 (max)
 \import lect02 (T, absurd)
-\import lect04 (Nat-elim, Nat-rec, Vec, vec)
+\import lect04 (J, Nat-elim, Nat-rec, Vec, vec)
 
 \open Nat (+, *)
 
@@ -167,16 +167,34 @@
   | con3 g => foo (g (foo (g 100)))
 -}
 
+--\func add : Nat -> Nat -> Nat => (+)
+\func foo-rec (d : D) : Nat => D-rec {Nat}
+    id
+    (+)
+    (\lam g => g {?})
+    d
 
 -- 12. Определите рекурсор и элиминатор для List.
 
+\func List-rec {A : \Type} {C : \Type} (nil : C) (cons : A -> List A -> C -> C) (l : List A) : C \elim l
+  | nil => nil
+  | head :: tail => cons head tail (List-rec nil cons tail)
+
+\func List-elim {A : \Type} {C : List A -> \Type} (nil : C nil)
+                (cons : \Pi (head : A) (tail : List A) -> C tail -> C (head :: tail)) (l : List A) : C l \elim l
+    | nil => nil
+    | head :: tail => cons head tail (List-elim nil cons tail)
+
+
 -- 13. Докажите pmap при помощи паттерн матчинга с idp.
 
-\func pmap {A B : \Type} (f : A -> B) {a a' : A} (p : a = a') : f a = f a' => {?}
+\func pmap {A B : \Type} (f : A -> B) {a a' : A} (p : a = a') : f a = f a' \elim p
+  | idp => idp
 
 -- 14. Докажите pmap2 при помощи паттерн матчинга с idp.
 
-\func pmap2 {A B C : \Type} (f : A -> B -> C) {a a' : A} (p : a = a') {b b' : B} (q : b = b') : f a b = f a' b' => {?}
+\func pmap2 {A B C : \Type} (f : A -> B -> C) {a a' : A} (p : a = a') {b b' : B} (q : b = b') : f a b = f a' b' \elim p, q
+  | idp, idp => idp
 
 -- Optional task
 -- 15. У оператора J есть другая форма, которую мы будем называть Jalt. Докажите, что J и Jalt эквивалентны, то есть выразите одно через другое и наоборот.
@@ -185,12 +203,16 @@
 
 \func Jalt {A : \Type} (B : \Pi (a a' : A) -> a = a' -> \Type)
            (b : \Pi (a : A) -> B a a idp)
-           {a a' : A} (p : a = a') : B a a' p => {?}
+           {a a' : A} (p : a = a') : B a a' p =>
+  J C (b a) p
+  \where {
+    \func C (a' : A) (p : a = a') : \Type => B a a' p
+  }
 
--- Выразите J через Jalt. Можно пользоваться только Jalt, idp и всем, что через них выражается.
 -- Hint:
 -- a. Выразите transport через Jalt.
 -- b. Докажите, что тип \Sigma (x : A) (a = x) одноэлементный, то есть, что для любого p : \Sigma (x : A) (a = x) верно, что (x,idp) = p.
+-- Выразите J через Jalt. Можно пользоваться только Jalt, idp и всем, что через них выражается.
 -- c. Используя эти две конструкции, легко определить J.
 
 \func transport'' {A : \Type} (B : A -> \Type) {a a' : A} (p : a = a') (b : B a) : B a' => {?}
