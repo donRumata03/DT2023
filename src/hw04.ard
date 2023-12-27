@@ -155,24 +155,35 @@
   | con2 D D
   | con3 (Nat -> D)
 
-\func D-rec {C : \Type} (con1 : Nat -> C) (con2 : C -> C -> C) (con3 : (Nat -> C) -> C) (d : D) : C \elim d
+\func D-elim {C : D -> \Type}
+             (con1 : \Pi (n : Nat) -> C (con1 n))
+             (con2 : \Pi (d1 d2 : D) -> C d1 -> C d2 -> C (con2 d1 d2))
+             (con3 : \Pi (f : Nat -> D) -> (\Pi (n : Nat) -> C (f n)) -> C (con3 f))
+             (d : D) : C d \elim d
   | con1 n => con1 n
-  | con2 d1 d2 => con2 (D-rec con1 con2 con3 d1) (D-rec con1 con2 con3 d2)
-  | con3 g => con3 (\lam n => D-rec con1 con2 con3 (g n))
+  | con2 d1 d2 => con2 d1 d2 (D-elim con1 con2 con3 d1) (D-elim con1 con2 con3 d2)
+  | con3 f => con3 f (\lam n => D-elim con1 con2 con3 (f n))
 
-{- To check that the definition of D-elim and D-rec is correct, you can try to implement foo using D-rec.
+\func D-rec {C : \Type} (con1 : Nat -> C) (con2 : C -> C -> C) (con3 : (Nat -> C) -> C) (d : D) : C =>
+    D-elim {\lam _ => C}
+        con1
+        (\lam _ _ => con2)
+        (\lam _ => con3)
+        d
+
+-- To check that the definition of D-elim and D-rec is correct, you can try to implement foo using D-rec.
 \func foo (d : D) : Nat
   | con1 n => n
   | con2 d1 d2 => foo d1 Nat.+ foo d2
   | con3 g => foo (g (foo (g 100)))
--}
 
---\func add : Nat -> Nat -> Nat => (+)
 \func foo-rec (d : D) : Nat => D-rec {Nat}
     id
     (+)
-    (\lam g => g {?})
+    (\lam g => g $ g 100)
     d
+
+\func foo-foo-rec-test : foo (con3 (\lam n => con1 n)) = foo-rec (con3 (\lam n => con1 n)) => idp
 
 -- 12. Определите рекурсор и элиминатор для List.
 
