@@ -1,5 +1,6 @@
 \import Data.Bool
 \import Logic
+\import Paths.Meta
 
 -- 1. Определите функцию swap и докажите, что swap (swap p) = p.
 
@@ -10,7 +11,7 @@
 
 -- 2. Докажите, что (\lam x => not (not x)) = (\lam x => x).
 
-\func notNotId : (\lam x => not (not x)) = (\lam x => x) => {?}
+\func notNotId : (\lam x => not (not x)) = (\lam x => x) => ext {?}
 
 -- 3. Докажите, что fac не равен suc.
 

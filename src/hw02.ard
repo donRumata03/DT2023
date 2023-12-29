@@ -3,9 +3,8 @@
 \import Data.Or
 \import Function.Meta
 \import Logic
-\import Paths
+\import Paths.Meta
 \import hw01 (fac)
-\import hw10 ()
 \import lect02 (List, cons, nil)
 
 -- 1. Определите полиморфный tail для списков.
@@ -31,9 +30,7 @@
 
 -- 3. Докажите ассоциативность && и ||.
 
-\func boolIsTrueOrFalse (b : Bool) : Or (b = true) (b = false)
-  | false => Or.inr idp
-  | true => Or.inl idp
+\func and-true
 
 \func &&-assoc (x y z : Bool) : (x and y) and z = x and (y and z)
   | true, true, true => idp
@@ -45,15 +42,17 @@
   | false, false, true => idp
   | false, false, false => idp
 
-\func ||-assoc (x y z : Bool) : (x or y) or z = x or (y or z)
-  | true, true, true => idp
-  | true, true, false => idp
-  | true, false, true => idp
-  | true, false, false => idp
-  | false, true, true => idp
-  | false, true, false => idp
-  | false, false, true => idp
-  | false, false, false => idp
+\func or-false (x : Bool) : x or false = x
+  | false => idp
+  | true => idp
+
+\func or-true (x : Bool) : x or true = true
+  | false => idp
+  | true => idp
+
+\func ||-assoc (x y z : Bool) : (x or y) or z = x or (y or z) \elim z
+  | false => rewrite (or-false, or-false) idp
+  | true => rewrite (or-true, or-true, or-true) idp
 
 -- 4. Докажите, что fac 3 равно 6.
 
