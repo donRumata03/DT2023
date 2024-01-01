@@ -164,11 +164,16 @@
   | con2 d1 d2 => con2 d1 d2 (D-elim con1 con2 con3 d1) (D-elim con1 con2 con3 d2)
   | con3 f => con3 f (\lam n => D-elim con1 con2 con3 (f n))
 
-\func D-rec {C : \Type} (con1 : Nat -> C) (con2 : C -> C -> C) (con3 : (Nat -> C) -> C) (d : D) : C =>
-    D-elim {\lam _ => C}
+\func D-rec {C : \Type}
+            (con1 : Nat -> C)
+            (con2 : D -> D -> C -> C -> C)
+            (con3 : (Nat -> D) -> (Nat -> C) -> C)
+            (d : D)
+  : C =>
+    D-elim
         con1
-        (\lam _ _ => con2)
-        (\lam _ => con3)
+        con2
+        con3
         d
 
 -- To check that the definition of D-elim and D-rec is correct, you can try to implement foo using D-rec.
@@ -179,8 +184,8 @@
 
 \func foo-rec (d : D) : Nat => D-rec {Nat}
     id
-    (+)
-    (\lam g => g $ g 100)
+    (\lam d1 d2 c1 c2 => c1 `+` c2)
+    (\lam f g => g $ g 100)
     d
 
 \func foo-foo-rec-test : foo (con3 (\lam n => con1 n)) = foo-rec (con3 (\lam n => con1 n)) => idp
