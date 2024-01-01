@@ -1,9 +1,14 @@
+\import Algebra.Meta
 \import Data.Bool
 \import Data.List (List, length)
+\import Data.SubList
 \import Function.Meta
 \import Logic
+\import Logic.Meta
+\import Meta
 \import Paths.Meta
 \import lect06
+\import lect09 (app)
 \open Nat(+,*)
 
 -- 1. Определите предикат принадлежности элемента списку.
@@ -43,22 +48,52 @@
 
 -- 5. Определите предикат Sublist xs ys на списках, означающий "список xs является подсписком ys".
 
+\data Sublist {A : \Type} (xs : List A) (ys : List A) \elim xs, ys
+  | List.nil, List.nil => sublist-nil
+  | x List.:: x-rem, y List.:: ys-rem => sublist-consume (x = y) (Sublist x-rem ys-rem)
+  | full-xs, y List.:: ys-rem => sublist-skip (Sublist full-xs ys-rem)
+
 -- 6. Докажите, что Sublist (filter p xs) xs для любых p и xs.
+
+\func filter-sublist {A : \Type} (xs : List A) (p : A -> Bool) : Sublist (filter p xs) xs \elim xs
+  | List.nil => sublist-nil
+  | x List.:: xs => cases (p x) \with {
+    | false => sublist-skip $ filter-sublist _ _
+    | true => sublist-consume idp $ filter-sublist _ _
+  }
 
 -- 7. Определите filter через if, а не через \case.
 --     Докажите для этой версии filter лемму filter-lem.
 
-\func filter' {A : \Type} (p : A -> Bool) (xs : List A) : List A => {?}
+\func filter' {A : \Type} (p : A -> Bool) (xs : List A) : List A \elim xs
+  | List.nil => List.nil
+  | List.:: x xs => if (p x) (x List.:: filter' p xs) (filter' p xs)
 
-\func filter-lem {A : \Type} (p : A -> Bool) (xs : List A) : LessOrEq (length (filter' p xs)) (length xs) => {?}
+
+\func filter-lem {A : \Type} (p : A -> Bool) (xs : List A) : LessOrEq (length (filter' p xs)) (length xs) \elim xs
+  | List.nil => zero<=_
+  | a List.:: xs => \case p a \as b, idp : p a = b \with { -- Could be cases (p a) but there was a plain \case in the original filter-lem
+    | false, q => rewrite q $ <=-helper (filter-lem p xs)
+    | true, q => rewrite q $ suc<=suc $ filter-lem p xs
+  }
 
 -- 8. Закончите определение функции \func BoolFuncLem (f : Bool -> Bool) (x : Bool) : f (f (f x)) = f x из лекции.
+\func BoolFuncLem (f : Bool -> Bool) (x : Bool) : f (f (f x)) = f x
+  => cases (f true arg addPath, f false arg addPath, x) cong -- The alternative would be to write lines with `rewtite (p_i, p_j) p_k
 
 -- 9. Докажите, что предикат isEven разрешим.
 
 \func isEven (n : Nat) => \Sigma (k : Nat) (n = 2 * k)
 
-\func isEven-dec : DecPred isEven => {?}
+\func dec-n-isEven (n : Nat) : Decide (isEven n) \elim n
+  | 0 => yes (0, idp)
+  | suc n => \case dec-n-isEven n \with {
+    | yes a => no $ {?}
+    | no _x => yes $ {?}
+  }
+
+
+\func isEven-dec : DecPred isEven => dec-n-isEven
 
 -- 10. Докажите, что если равенство элементов A разрешимо, то и равенство элементов List A тоже разрешимо.
 
