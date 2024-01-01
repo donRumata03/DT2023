@@ -3,6 +3,7 @@
 \import Data.Or
 \import Function.Meta
 \import Logic
+\import Meta
 \import Paths.Meta
 \import hw01 (fac)
 \import lect02 (List, cons, nil)
@@ -30,17 +31,7 @@
 
 -- 3. Докажите ассоциативность && и ||.
 
-\func and-true
-
-\func &&-assoc (x y z : Bool) : (x and y) and z = x and (y and z)
-  | true, true, true => idp
-  | true, true, false => idp
-  | true, false, true => idp
-  | true, false, false => idp
-  | false, true, true => idp
-  | false, true, false => idp
-  | false, false, true => idp
-  | false, false, false => idp
+\func &&-assoc (x y z : Bool) : (x and y) and z = x and (y and z) => cases (x, y, z) idp
 
 \func or-false (x : Bool) : x or false = x
   | false => idp
