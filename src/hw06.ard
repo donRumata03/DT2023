@@ -2,6 +2,7 @@
 \import Arith.Nat (-', suc/=0)
 \import Data.Bool
 \import Data.List (List, length)
+\import Data.Maybe
 \import Data.SubList
 \import Function.Meta
 \import Logic
@@ -118,8 +119,30 @@
 
 -- 10. Докажите, что если равенство элементов A разрешимо, то и равенство элементов List A тоже разрешимо.
 
+\func head {A : \Type} (xs : List A) (default : A) : A \elim xs
+  | List.nil => default
+  | x List.:: _ => x
+
+\func tail {A : \Type} (xs : List A) : List A \elim xs
+  | List.nil => List.nil
+  | _ List.:: xs => xs
+
+\func uncons {A : \Type} {x y : A} {ys xs : List A} (p : x List.:: xs = y List.:: ys) : x = y
+    => pmap (head __ x) p
+
 \instance ListEq {A : \Type} (dec : Eq A) : Eq (List A)
-  | decideEq => {?}
+  | decideEq (xs ys : List A) : Decide (xs = ys) \with {
+    | List.nil, List.nil => yes idp
+    | List.nil, a List.:: ys => no $ \lam p => contradiction
+    | a List.:: xs, List.nil => no $ \lam p => contradiction
+    | a List.:: xs, a1 List.:: ys => cases (dec.decideEq a a1) \with {
+      | yes headEq => cases (decideEq xs ys) \with {
+        | yes tailEq => yes $ pmap2 (List.::) headEq tailEq
+        | no tail!= => no $ \lam p => tail!= $ pmap (tail __) p
+      }
+      | no tail!= => no $ \lam p => tail!= $ uncons p
+    }
+  }
 
 -- 11. Докажите, что функции FromBoolToDec и FromDecToBool взаимно обратны.
 
