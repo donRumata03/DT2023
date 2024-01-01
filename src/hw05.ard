@@ -1,17 +1,19 @@
 \import Data.Bool
+\import Function.Meta
 \import Logic
+\import Meta
 \import Paths.Meta
 
 -- 1. Определите функцию swap и докажите, что swap (swap p) = p.
 
-\func swap {A B : \Type} (p : \Sigma A B) : \Sigma B A
-  => {?}
+\func swap {A B : \Type} (p : \Sigma A B) : \Sigma B A \elim p
+  | (a,b) => (b, a)
 
-\func swap-involutive {A B : \Type} (p : \Sigma A B) : swap (swap p) = p => {?}
+\func swap-involutive {A B : \Type} (p : \Sigma A B) : swap (swap p) = p => idp
 
 -- 2. Докажите, что (\lam x => not (not x)) = (\lam x => x).
 
-\func notNotId : (\lam x => not (not x)) = (\lam x => x) => ext {?}
+\func notNotId : (\lam x => not (not x)) = (\lam x => x) => ext $ \lam x => cases x idp
 
 -- 3. Докажите, что fac не равен suc.
 
