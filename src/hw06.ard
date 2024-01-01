@@ -1,4 +1,5 @@
 \import Algebra.Meta
+\import Arith.Nat (-', suc/=0)
 \import Data.Bool
 \import Data.List (List, length)
 \import Data.SubList
@@ -6,7 +7,9 @@
 \import Logic
 \import Logic.Meta
 \import Meta
+\import Paths
 \import Paths.Meta
+\import lect01 (-)
 \import lect06
 \import lect09 (app)
 \open Nat(+,*)
@@ -84,14 +87,32 @@
 -- 9. Докажите, что предикат isEven разрешим.
 
 \func isEven (n : Nat) => \Sigma (k : Nat) (n = 2 * k)
+\func isOdd (n : Nat) => \Sigma (k : Nat) (n = 2 * k + 1)
+
+\func pred (n : Nat) : Nat \elim n
+  | 0 => 0
+  | suc n => n
+\func unsuc {n m : Nat} (p : suc n = suc m) : n = m => pmap pred p
 
 \func dec-n-isEven (n : Nat) : Decide (isEven n) \elim n
   | 0 => yes (0, idp)
-  | suc n => \case dec-n-isEven n \with {
-    | yes a => no $ {?}
-    | no _x => yes $ {?}
+  | suc n => \case dec-n-isOdd n \with {
+    | yes a => yes $ (a.1 + 1, pmap suc a.2)
+    | no _x => no $ \lam (k, p) => _x $ odd-if-suc-even {n} (k, p)
+  }
+  \where {
+    \func odd-if-suc-even {n : Nat} (p : isEven (suc n)) : isOdd n => \let (k, pnk) => p \in
+      cases (k arg addPath, pnk) \with {
+        | suc x, k=suc_x, _ => (x, unsuc $ (pnk *> equation))
+      }
   }
 
+\func dec-n-isOdd (n : Nat) : Decide (isOdd n) \elim n
+  | 0 => no $ \lam (k, p) => suc/=0 $ inv p
+  | suc n => \case dec-n-isEven n \with {
+    | yes a => yes $ (a.1, pmap suc a.2)
+    | no _x => no $ \lam (k, p) => _x $ (k, unsuc p)
+  }
 
 \func isEven-dec : DecPred isEven => dec-n-isEven
 
