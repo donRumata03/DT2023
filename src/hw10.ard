@@ -12,6 +12,7 @@
 \import Set.Hedberg
 \import hw06 (unsuc)
 \import lect02 ()
+\import lect05 (funExt, unext)
 \import lect06 (Decide, NatEq, So-dec, no, yes)
 \import lect10
 \import lect11 (NatDecEq, Set2-to-Set1', inc0)
@@ -158,21 +159,6 @@
   | p, q, inr b => inr $ inc0 b
 }
 
-\func or-isSet' {A B : \Type} (p : isSet A) (q : isSet B) : isSet (Or A B) =>
-  \let
-    | A' => Set2-to-Set1' A p
-    | B' => Set2-to-Set1' B q
-    | isSetOrA'B' => or-isSet {A'} {B'}
-    \in \lam a a' paa'_1 paa'_2 =>
-      \let
-        | aa => unfold (pmap, wrapSets) $ isSetOrA'B' (wrapSets a) (wrapSets a') (pmap wrapSets paa'_1) (pmap wrapSets paa'_2)
-    \in pmap (mcases \with {
-        | inl a1, inl a2 => \lam _ => paa'_1
-        | inl a1, inr b => \lam eq => contradiction
-        | inr b, inl a1 => \lam eq => contradiction
-        | inr b, inr b1 => \lam _ => paa'_1
-      } ) aa
-
 \lemma or-isSet {A B : \Set} : isSet (Or A B) => Set-lemma
 -- Could be wrapSets for conversion to \Set
 --  (\lam or1 or2 => OrEquality (Set2-to-Set1' A p) (Set2-to-Set1' B q) (wrapSets or1) (wrapSets or2))
@@ -188,12 +174,40 @@
 
 -- 10. Если B x является множеством, то \Pi (x : A) -> B x тоже является множеством.
 
-\func pi-isSet {A : \Type} (B : A -> \Type) (p : \Pi (x : A) -> isSet (B x)) : isSet (\Pi (x : A) -> B x) => {?}
+\data FuncEq {A : \Type} (B : A -> \Set) (p : \Pi (x : A) -> isSet (B x)) (f g : \Pi (x : A) -> B x) : \Prop
+  | funcEq (\Pi (x : A) -> f x = g x)
+  \where {
+    \use \level FuncEq-isProp {A : \Type} {B : A -> \Set} {p : \Pi (x : A) -> isSet (B x)} {f g : \Pi (x : A) -> B x} (funcEq1 funcEq2 : FuncEq B p f g) : funcEq1 = funcEq2
+      | {A1}, {B1}, {p}, {f1}, {g1}, funcEq f', funcEq g' => pmap {\Pi (x : A1) -> f1 x = g1 x} funcEq $ funExt \lam x => p x _ _ _ _
+  }
+
+\lemma pi-isSet {A : \Type} (B : A -> \Set) (p : \Pi (x : A) -> isSet (B x)) : isSet (\Pi (x : A) -> B x) => Set-lemma {\Pi (x : A) -> B x}
+  (\lam f g => FuncEq B p f g)
+  (\lam {a} => funcEq $ unext idp)
+  (\lam {a} {a'} f => ext $ \case f \with {
+    | funcEq _x => _x
+  } )
 
 -- 11. Докажите, что если A является множеством, то List A также им является.
 
-\func List-isSet {A : \Type} (pA : isSet A) : isSet (List A)
-  => {?}
+\data ListEq {A : \Set} (p : isSet A) (l1 l2 : List A) : \Prop \elim l1, l2
+  | List.nil, List.nil => nil-eq
+  | a List.:: as, b List.:: bs => cons-eq (a = b) (ListEq p as bs)
+
+\lemma List-isSet {A : \Set} (pA : isSet A) : isSet (List A)
+  => Set-lemma
+    (\lam l1 l2 => ListEq pA l1 l2)
+    (\lam {a} => from=-toListEq pA a)
+    (\lam {a} {a'} lEq => fromListEq-to-= pA a a' lEq)
+  \where {
+    \func fromListEq-to-= (pA : isSet A) (l1 l2 : List A) (lEq : ListEq pA l1 l2) : l1 = l2 \elim l1, l2, lEq
+      | List.nil, List.nil, nil-eq => idp
+      | a List.:: as, b List.:: bs, cons-eq aEq asEq => pmap2 (List.::) aEq $ fromListEq-to-= pA as bs asEq
+
+    \func from=-toListEq (pA : isSet A) (l : List A) : ListEq pA l l \elim l
+      | nil => nil-eq
+      | a :: l => cons-eq idp $ from=-toListEq pA l
+  }
 
 -- Optional:
 -- 12. Докажите, что n-типы замкнуты относительно образования \Pi-типов.
