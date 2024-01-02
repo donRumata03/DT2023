@@ -1,10 +1,17 @@
 \import Algebra.Meta
+\import Arith.Nat (NatSemiring)
 \import Data.Bool
 \import Data.List
 \import Function.Meta
 \import Logic
 \import Logic.Meta
-\import lect06 (Decide)
+\import Meta
+\import Paths
+\import Paths.Meta
+\import Set ()
+\import Set.Hedberg
+\import lect02 ()
+\import lect06 (Decide, So-dec, no, yes)
 \import lect10
 
 -- 1. Пусть f : A -> B и g : B -> C ─ некоторые функции.
@@ -14,22 +21,24 @@
 -- Композиция функций
 \func \fixr 9 o {A B C : \Type} (g : B -> C) (f : A -> B) => \lam a => g (f a)
 
-\func o-inj {A B C : \Type} (f : A -> B) (g : B -> C) (p : isInj f) (q : isInj g) : isInj (g `o` f) => {?}
+\func o-inj {A B C : \Type} (f : A -> B) (g : B -> C) (p : isInj f) (q : isInj g) : isInj (g `o` f) =>
+  unfold (isInj, o) $ \lam g_o_f_eq => p $ q g_o_f_eq
 
-\func o-inj' {A B C : \Type} (f : A -> B) (g : B -> C) (p : isInj (g `o` f)) : isInj f => {?}
+\func o-inj' {A B C : \Type} (f : A -> B) (g : B -> C) (p : isInj (g `o` f)) : isInj f =>
+  unfold isInj \lam fx=fy => p $ pmap g fx=fy
 
 -- 2. Определите предикат "делится на 3 или на 5" так, чтобы он возвращал утверждения.
 --    Докажите, что MultipleOf3Or5 вкладывается в ℕ.
 
-\func isMultipleOf3Or5 (n : Nat) : \Type => {?}
+\func isMultipleOf3Or5 (n : Nat) : \Type => So $ mod3 n Set.DecSet.== 0 and mod5 n Set.DecSet.== 0
 
-\func isMultipleOf3Or5-isProp (n : Nat) : isProp (isMultipleOf3Or5 n) => {?}
+\lemma isMultipleOf3Or5-isProp (n : Nat) : isProp (isMultipleOf3Or5 n) => Path.inProp
 
 \func MultipleOf3Or5 => \Sigma (n : Nat) (isMultipleOf3Or5 n)
 
 \func Mul-inc (m : MultipleOf3Or5) => m.1
 
-\func Mul-inc-isInj : isInj Mul-inc => {?}
+\func Mul-inc-isInj : isInj Mul-inc => unfold isInj \lam {x} {y} p => ext p -- Second element of pair is prop, so its elements are considered equal automatically
 
 -- 3. Мы будем говорить, что тип A тривиален, если существует элемент в A, такой что любой другой элемент в A равен ему.
 --    Докажите, что тип A тривиален тогда и только тогда, когда A является утверждением и A населен.
@@ -63,11 +72,11 @@
   | 0, m => z<=n
   | suc n, suc m => s<=s (LessOrEq n m)
 
-\func LessOrEq-isProp {n m : Nat} : isProp (LessOrEq n m) \elim n, m
-  | 0, 0 => {?}
-  | 0, suc _ => {?}
-  | suc _, 0 => contradiction
-  | suc n, suc m => \lam a a' => {?}
+\func LessOrEq-isProp {n m : Nat} : isProp (LessOrEq n m) => \lam a a' => evaluate<=Prop a a'
+
+\func evaluate<=Prop {n m : Nat} (a a' : LessOrEq n m) : a = a' \elim n, m, a, a'
+  | 0, m1, z<=n, z<=n => idp
+  | suc n1, suc m1, s<=s a1, s<=s a'1 => pmap s<=s $ evaluate<=Prop a1 a'1
 
 -- 6. Докажте, что ReflClosure LessOrEq не является предикатом, а ReflClosure (\lam x y => T (x < y)) является.
 
@@ -90,8 +99,20 @@
 
 -- 8. Докажите, что тип с разрешимым равенством являетя множеством.
 
-\func Dec-isSet {A : \Type} (dec : \Pi (x y : A) -> Decide (x = y)) : isSet A
-  => {?}
+\func dec2Bool {A : \Type} (d : Decide A) : Bool
+  | yes _ => true
+  | no _ => false
+
+\lemma Dec-isSet {A : \Type} (dec : \Pi (x y : A) -> Decide (x = y)) : isSet A =>
+  Set-lemma
+    (\lam x y => So $ dec2Bool $ dec x y)
+    (\lam {a} => cases (dec a a) \with {
+      | yes a1 => ()
+      | no _x => contradiction
+    })
+    (\lam {a} {a'} s => cases (dec a a', s) \with {
+      | yes a1, s1 => a1
+    })
 
 -- 9. Если A и B являются множествами, то A `Or` B тоже является множеством.
 
