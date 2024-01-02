@@ -146,14 +146,24 @@
 
 -- 11. Докажите, что функции FromBoolToDec и FromDecToBool взаимно обратны.
 
-\func bdb {A : \Type} (p : A -> Bool) : FromDecToBool (FromBoolToDec p) = p => {?}
+\func bdb {A : \Type} (p : A -> Bool) : FromDecToBool (FromBoolToDec p) = p =>
+ ext $ \lam a => cases (p a arg addPath) \with {
+   | false, p1 => unfold (FromBoolToDec, FromDecToBool) $ mcases \with {
+      | no _ => idp
+      | yes p2 => absurd $ rewriteF p1 p2
+     }
+   | true, p1 => unfold (FromBoolToDec, FromDecToBool) $ rewrite p1 idp
+ }
 
 -- Мы не можем доказать, что FromBoolToDec (FromDecToBool P) = P, но мы можем доказать более слабое утверждение: эти предикаты логически эквивалентны.
 -- Для этого введем эквивалентность предикатов.
 
 \func dbd {A : \Type} (P : \Sigma (P : A -> \Type) (DecPred P))
   : \Pi (x : A) -> (FromBoolToDec (FromDecToBool P)).1 x <-> P.1 x
-  => {?}
+  => unfold (FromBoolToDec, FromDecToBool) $ \lam x => mcases \with {
+    | yes a1 => (\lam _ => a1, \lam _ => ())
+    | no _x => (absurd, _x __)
+  }
 
 -- Optional:
 -- 12. Парадокс Рассела показывает, что не существует множества всех множеств.
@@ -166,4 +176,8 @@
 -- Это легко доказать при помощи исключенного третьего, но утверждение верно и без него.
 -- Докажите этот факт.
 \func contrProp {A : \Type} (p : A -> Not A) (q : Not A -> A) : Empty
-  => {?}
+  => p a a
+  \where {
+    \func a->empty (a : A) : Empty => p a a
+    \func a : A => q a->empty
+  }
