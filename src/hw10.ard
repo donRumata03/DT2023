@@ -10,9 +10,11 @@
 \import Paths.Meta
 \import Set ()
 \import Set.Hedberg
+\import hw06 (unsuc)
 \import lect02 ()
-\import lect06 (Decide, So-dec, no, yes)
+\import lect06 (Decide, NatEq, So-dec, no, yes)
 \import lect10
+\import lect11 (NatDecEq, Set2-to-Set1', inc0)
 
 -- 1. Пусть f : A -> B и g : B -> C ─ некоторые функции.
 --    Докажите, что если f и g инъективны, то g `o` f также инъективна.
@@ -89,13 +91,34 @@
   | refl (x = y)
   | inc (R x y)
 
-\func ReflClosure_<-isProp (n m : Nat) : isProp (ReflClosure (\lam x y => So (x < y)) n m) => {?}
+\lemma Nat-isSet : isSet Nat => Dec-isSet NatEq.decideEq
 
-\func ReflClosure_<=-isNotProp (p : \Pi (n m : Nat) -> isProp (ReflClosure LessOrEq n m)) : Empty => {?}
+\func ReflClosure_<-isProp (n m : Nat) : isProp (ReflClosure (\lam x y => So (x < y)) n m) => equate-ReflClosure_< n m
+  \where {
+    \func equate-ReflClosure_< (n m : Nat) (a a' : ReflClosure (\lam x y => So (x < y)) n m) : a = a' \elim n, m, a, a'
+      | n, m, refl p, refl p' => pmap refl $ Nat-isSet n m p p'
+      | n1, m1, inc a1, inc a'1 => pmap inc $ Path.inProp _ _
+      | n1, m1, refl p, inc r => absurd $ not-less-and-eq r p
+      | n1, m1, inc a1, refl p => absurd $ not-less-and-eq a1 p
+
+    \func not-less-and-eq {n m : Nat} (a : So (n < m)) (p : n = m) : Empty
+      | {0}, {0}, (), p
+      | {suc n1}, {suc m1}, a, p => not-less-and-eq a (unsuc p)
+  }
+
+\func ReflClosure_<=-isNotProp (p : \Pi (n m : Nat) -> isProp (ReflClosure LessOrEq n m)) : Empty =>
+  p1!=p2 $ p n m p1 p2
+  \where {
+    \func n => 0
+    \func m => 0
+    \func p1 : ReflClosure LessOrEq n m => refl idp
+    \func p2 : ReflClosure LessOrEq n m => inc $ z<=n
+    \func p1!=p2 (pp : p1 = p2) : Empty => contradiction
+  }
 
 -- 7. Докажите, что если тип A вкладывается в тип B и B является утверждением, то и A является утверждением.
 
-\func sub-isProp {A B : \Type} (f : A -> B) (p : isInj f) (q : isProp B) : isProp A => {?}
+\func sub-isProp {A B : \Type} (f : A -> B) (p : isInj f) (q : isProp B) : isProp A => \lam a a' => p $ q _ _
 
 -- 8. Докажите, что тип с разрешимым равенством являетя множеством.
 
@@ -120,7 +143,48 @@
   | inl A
   | inr B
 
-\func or-isSet {A B : \Type} (p : isSet A) (q : isSet B) : isSet (Or A B) => {?}
+\data OrEquality (A B : \Set) {-(p : isSet A) (q : isSet B)-} (x y : Or A B) : \Prop \elim x, y
+  | inl l1, inl l2 => Left (l1 = l2)
+  | inr r1, inr r2 => Right (r1 = r2)
+  \where {
+  -- Could be as an exliplicit proof
+--    \use \level OrEquality-isProp {A B : \Type} {p : isSet A} {q : isSet B} {x y : Or A B} (orEq1 orEq2 : OrEquality A B p q x y) : orEq1 = orEq2
+--      | {A1}, {B1}, {p1}, {q1}, {inl l1}, {inl l2}, Left p2, Left p3 => pmap Left $ p1 l1 l2 p2 p3
+--      | {A1}, {B1}, {p1}, {q1}, {inr r1}, {inr r2}, Right p2, Right p3 => pmap Right $ q1 r1 r2 p2 p3
+  }
+
+\func wrapSets {A B : \Type} {p : isSet A} {q : isSet B} (or : Or A B) : Or (Set2-to-Set1' A p) (Set2-to-Set1' B q) => \case p, q, or \with {
+  | p, q, inl a => inl $ inc0 a
+  | p, q, inr b => inr $ inc0 b
+}
+
+\func or-isSet' {A B : \Type} (p : isSet A) (q : isSet B) : isSet (Or A B) =>
+  \let
+    | A' => Set2-to-Set1' A p
+    | B' => Set2-to-Set1' B q
+    | isSetOrA'B' => or-isSet {A'} {B'}
+    \in \lam a a' paa'_1 paa'_2 =>
+      \let
+        | aa => unfold (pmap, wrapSets) $ isSetOrA'B' (wrapSets a) (wrapSets a') (pmap wrapSets paa'_1) (pmap wrapSets paa'_2)
+    \in pmap (mcases \with {
+        | inl a1, inl a2 => \lam _ => paa'_1
+        | inl a1, inr b => \lam eq => contradiction
+        | inr b, inl a1 => \lam eq => contradiction
+        | inr b, inr b1 => \lam _ => paa'_1
+      } ) aa
+
+\lemma or-isSet {A B : \Set} : isSet (Or A B) => Set-lemma
+-- Could be wrapSets for conversion to \Set
+--  (\lam or1 or2 => OrEquality (Set2-to-Set1' A p) (Set2-to-Set1' B q) (wrapSets or1) (wrapSets or2))
+  (\lam or1 or2 => OrEquality A B or1 or2)
+  (\lam {a} => cases a \with {
+    | inl a1 => Left idp
+    | inr b => Right idp
+  } )
+  (\lam {a} {a'} orEq => cases (a, a', orEq) \with {
+    | inl l1, inl l2, Left p1 => pmap inl p1
+    | inr r1, inr r2, Right p1 => pmap inr p1
+  })
 
 -- 10. Если B x является множеством, то \Pi (x : A) -> B x тоже является множеством.
 

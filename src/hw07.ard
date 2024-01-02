@@ -3,6 +3,7 @@
 \import Function (o)
 \import Function.Meta
 \import Logic
+\import Logic.Meta
 \import Meta
 \import Paths
 \import Paths.Meta
@@ -92,10 +93,8 @@
   | return => \lam a => \new State {
     | state => \lam s => (s, a)
   }
-  | >>= m f => \new State {
-    | state => \lam s0 => \let (s1, x) => state {m} s0 \in
-          state {f x} s1
-  }
+  | >>= m f => constructor \lam s0 =>
+      \let (s1, x) => state {m} s0 \in state {f x} s1
   | left-id a h => idp
   | right-id m => idp
   | comp-assoc m g h => idp
