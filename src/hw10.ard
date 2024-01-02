@@ -1,6 +1,9 @@
+\import Algebra.Meta
 \import Data.Bool
 \import Data.List
+\import Function.Meta
 \import Logic
+\import Logic.Meta
 \import lect06 (Decide)
 \import lect10
 
@@ -35,11 +38,24 @@
 
 \func \infix 1 <-> (A B : \Type) => \Sigma (A -> B) (B -> A)
 
-\func isTriv-lem (A : \Type) : isTriv A <-> (\Sigma (isProp A) A) => {?}
+\func isTriv-lem (A : \Type) : isTriv A <-> (\Sigma (isProp A) A) => (isTriv->P&i A, P&i->isTriv A)
+  \where {
+    \func isTriv->P&i (A : \Type) : isTriv A -> \Sigma (isProp A) A => \lam (a, p) =>
+        (\lam a' a'' => \let | p' => p a' | p'' => p a'' \in cong, a)
+
+    \func P&i->isTriv (A : \Type) : \Sigma (isProp A) A -> isTriv A => \lam (prop, a) => (a, prop a)
+  }
 
 -- 4. Докажите, что Either не является утверждением в общем случаем.
 
-\func Either-isProp (p : \Pi {A B : \Type} (pA : isProp A) (pB : isProp B) -> isProp (Or A B)) : Empty => {?}
+\func Either-isProp (p : \Pi {A B : \Type} (pA : isProp A) (pB : isProp B) -> isProp (Or A B)) : Empty =>
+  inl!=inr $ or-isProp v1 v2
+  \where {
+    \func v1 : Or Unit Unit => inl unit
+    \func v2 : Or Unit Unit => inr unit
+    \func or-isProp => p Unit'-isProp Unit'-isProp
+    \func inl!=inr (p : inl unit = inr unit) : Empty => contradiction
+  }
 
 -- 5. Докажите, что LessOrEq является предикатом.
 
@@ -47,7 +63,11 @@
   | 0, m => z<=n
   | suc n, suc m => s<=s (LessOrEq n m)
 
-\func LessOrEq-isProp {n m : Nat} : isProp (LessOrEq n m) => {?}
+\func LessOrEq-isProp {n m : Nat} : isProp (LessOrEq n m) \elim n, m
+  | 0, 0 => {?}
+  | 0, suc _ => {?}
+  | suc _, 0 => contradiction
+  | suc n, suc m => \lam a a' => {?}
 
 -- 6. Докажте, что ReflClosure LessOrEq не является предикатом, а ReflClosure (\lam x y => T (x < y)) является.
 

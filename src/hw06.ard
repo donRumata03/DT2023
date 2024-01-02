@@ -1,9 +1,18 @@
+\import Algebra.Meta
+\import Arith.Nat (-', suc/=0)
 \import Data.Bool
 \import Data.List (List, length)
+\import Data.Maybe
+\import Data.SubList
 \import Function.Meta
 \import Logic
+\import Logic.Meta
+\import Meta
+\import Paths
 \import Paths.Meta
+\import lect01 (-)
 \import lect06
+\import lect09 (app)
 \open Nat(+,*)
 
 -- 1. Определите предикат принадлежности элемента списку.
@@ -43,38 +52,118 @@
 
 -- 5. Определите предикат Sublist xs ys на списках, означающий "список xs является подсписком ys".
 
+\data Sublist {A : \Type} (xs : List A) (ys : List A) \elim xs, ys
+  | List.nil, List.nil => sublist-nil
+  | x List.:: x-rem, y List.:: ys-rem => sublist-consume (x = y) (Sublist x-rem ys-rem)
+  | full-xs, y List.:: ys-rem => sublist-skip (Sublist full-xs ys-rem)
+
 -- 6. Докажите, что Sublist (filter p xs) xs для любых p и xs.
+
+\func filter-sublist {A : \Type} (xs : List A) (p : A -> Bool) : Sublist (filter p xs) xs \elim xs
+  | List.nil => sublist-nil
+  | x List.:: xs => cases (p x) \with {
+    | false => sublist-skip $ filter-sublist _ _
+    | true => sublist-consume idp $ filter-sublist _ _
+  }
 
 -- 7. Определите filter через if, а не через \case.
 --     Докажите для этой версии filter лемму filter-lem.
 
-\func filter' {A : \Type} (p : A -> Bool) (xs : List A) : List A => {?}
+\func filter' {A : \Type} (p : A -> Bool) (xs : List A) : List A \elim xs
+  | List.nil => List.nil
+  | List.:: x xs => if (p x) (x List.:: filter' p xs) (filter' p xs)
 
-\func filter-lem {A : \Type} (p : A -> Bool) (xs : List A) : LessOrEq (length (filter' p xs)) (length xs) => {?}
+
+\func filter-lem {A : \Type} (p : A -> Bool) (xs : List A) : LessOrEq (length (filter' p xs)) (length xs) \elim xs
+  | List.nil => zero<=_
+  | a List.:: xs => \case p a \as b, idp : p a = b \with { -- Could be cases (p a) but there was a plain \case in the original filter-lem
+    | false, q => rewrite q $ <=-helper (filter-lem p xs)
+    | true, q => rewrite q $ suc<=suc $ filter-lem p xs
+  }
 
 -- 8. Закончите определение функции \func BoolFuncLem (f : Bool -> Bool) (x : Bool) : f (f (f x)) = f x из лекции.
+\func BoolFuncLem (f : Bool -> Bool) (x : Bool) : f (f (f x)) = f x
+  => cases (f true arg addPath, f false arg addPath, x) cong -- The alternative would be to write lines with `rewtite (p_i, p_j) p_k
 
 -- 9. Докажите, что предикат isEven разрешим.
 
 \func isEven (n : Nat) => \Sigma (k : Nat) (n = 2 * k)
+\func isOdd (n : Nat) => \Sigma (k : Nat) (n = 2 * k + 1)
 
-\func isEven-dec : DecPred isEven => {?}
+\func pred (n : Nat) : Nat \elim n
+  | 0 => 0
+  | suc n => n
+\func unsuc {n m : Nat} (p : suc n = suc m) : n = m => pmap pred p
+
+\func dec-n-isEven (n : Nat) : Decide (isEven n) \elim n
+  | 0 => yes (0, idp)
+  | suc n => \case dec-n-isOdd n \with {
+    | yes a => yes $ (a.1 + 1, pmap suc a.2)
+    | no _x => no $ \lam (k, p) => _x $ odd-if-suc-even {n} (k, p)
+  }
+  \where {
+    \func odd-if-suc-even {n : Nat} (p : isEven (suc n)) : isOdd n => \let (k, pnk) => p \in
+      cases (k arg addPath, pnk) \with {
+        | suc x, k=suc_x, _ => (x, unsuc $ (pnk *> equation))
+      }
+  }
+
+\func dec-n-isOdd (n : Nat) : Decide (isOdd n) \elim n
+  | 0 => no $ \lam (k, p) => suc/=0 $ inv p
+  | suc n => \case dec-n-isEven n \with {
+    | yes a => yes $ (a.1, pmap suc a.2)
+    | no _x => no $ \lam (k, p) => _x $ (k, unsuc p)
+  }
+
+\func isEven-dec : DecPred isEven => dec-n-isEven
 
 -- 10. Докажите, что если равенство элементов A разрешимо, то и равенство элементов List A тоже разрешимо.
 
+\func head {A : \Type} (xs : List A) (default : A) : A \elim xs
+  | List.nil => default
+  | x List.:: _ => x
+
+\func tail {A : \Type} (xs : List A) : List A \elim xs
+  | List.nil => List.nil
+  | _ List.:: xs => xs
+
+\func uncons {A : \Type} {x y : A} {ys xs : List A} (p : x List.:: xs = y List.:: ys) : x = y
+    => pmap (head __ x) p
+
 \instance ListEq {A : \Type} (dec : Eq A) : Eq (List A)
-  | decideEq => {?}
+  | decideEq (xs ys : List A) : Decide (xs = ys) \with {
+    | List.nil, List.nil => yes idp
+    | List.nil, a List.:: ys => no $ \lam p => contradiction
+    | a List.:: xs, List.nil => no $ \lam p => contradiction
+    | a List.:: xs, a1 List.:: ys => cases (dec.decideEq a a1) \with {
+      | yes headEq => cases (decideEq xs ys) \with {
+        | yes tailEq => yes $ pmap2 (List.::) headEq tailEq
+        | no tail!= => no $ \lam p => tail!= $ pmap (tail __) p
+      }
+      | no tail!= => no $ \lam p => tail!= $ uncons p
+    }
+  }
 
 -- 11. Докажите, что функции FromBoolToDec и FromDecToBool взаимно обратны.
 
-\func bdb {A : \Type} (p : A -> Bool) : FromDecToBool (FromBoolToDec p) = p => {?}
+\func bdb {A : \Type} (p : A -> Bool) : FromDecToBool (FromBoolToDec p) = p =>
+ ext $ \lam a => cases (p a arg addPath) \with {
+   | false, p1 => unfold (FromBoolToDec, FromDecToBool) $ mcases \with {
+      | no _ => idp
+      | yes p2 => absurd $ rewriteF p1 p2
+     }
+   | true, p1 => unfold (FromBoolToDec, FromDecToBool) $ rewrite p1 idp
+ }
 
 -- Мы не можем доказать, что FromBoolToDec (FromDecToBool P) = P, но мы можем доказать более слабое утверждение: эти предикаты логически эквивалентны.
 -- Для этого введем эквивалентность предикатов.
 
 \func dbd {A : \Type} (P : \Sigma (P : A -> \Type) (DecPred P))
   : \Pi (x : A) -> (FromBoolToDec (FromDecToBool P)).1 x <-> P.1 x
-  => {?}
+  => unfold (FromBoolToDec, FromDecToBool) $ \lam x => mcases \with {
+    | yes a1 => (\lam _ => a1, \lam _ => ())
+    | no _x => (absurd, _x __)
+  }
 
 -- Optional:
 -- 12. Парадокс Рассела показывает, что не существует множества всех множеств.
@@ -87,4 +176,8 @@
 -- Это легко доказать при помощи исключенного третьего, но утверждение верно и без него.
 -- Докажите этот факт.
 \func contrProp {A : \Type} (p : A -> Not A) (q : Not A -> A) : Empty
-  => {?}
+  => p a a
+  \where {
+    \func a->empty (a : A) : Empty => p a a
+    \func a : A => q a->empty
+  }

@@ -1,9 +1,13 @@
 \import Data.Bool
 \import Data.Maybe
+\import Function (o)
 \import Function.Meta
 \import Logic
 \import Meta
+\import Paths
+\import Paths.Meta
 \import lect07
+\import lect07 (fmap)
 \open Nat(+)
 
 -- 1. Определите функцию swap несколькими способами.
@@ -57,27 +61,60 @@
 
 \class Monad \extends Functor {
   | return {A : \Set} : A -> F A
-  | \infixl 1 >>= {A B : \Set} : F A -> (A -> F B) -> F B
-
-  -- Monadic laws
+  | \infixl 1 >>= {A B : \Set} : F A -> (A -> F B) -> F B -- Monadic laws
   | left-id {A B : \Set} (a : A) (h : A -> F B) : (return a >>= h) = h a
-  | right-id {A B : \Set} (m : F B) : (m  >>= return) = m
-  | comp-assoc {A B C : \Set} (m : F A) (g : A -> F B) (h : B -> F C) : ((m >>= g) >>= h) = (m >>= (\lam x => g x >>= h))
-
-  -- Implementation of fmap based on monad stuff and proof of its properties based on monadic laws
-  \default fmap {A B : \Set} (func : A -> B) (f : F A) : F B => f >>= (\lam a => return $ func a)
-  \default fmap-id => {?}
-  \default fmap-comp => {?}
+  | right-id {B : \Set} (m : F B) : (m  >>= return) = m
+  | comp-assoc {A B C : \Set} (m : F A) (g : A -> F B) (h : B -> F C) : ((m >>= g) >>= h) = (m >>= (\lam x => g x >>= h)) -- Implementation of fmap based on monad stuff and proof of its properties based on monadic laws
+  | fmap {A B : \Set} (func : A -> B) (f : F A) => f >>= \lam x => return $ func x
+  | fmap-id m => unfold $ right-id m
+  | fmap-comp f g m => unfold $ {?}
+--    ==< inv comp-assoc >== `qed
 }
 
 -- 6. Определите \instance Monad для Maybe.
 
-\instance MaybeMonad : Monad Maybe => {?}
+\instance MaybeMonad : Monad Maybe
+  | return => just
+  | >>= m f => \case m \with {
+    | nothing => nothing
+    | just x => f x
+  }
+  | left-id a h => idp
+  | right-id m => cases m idp
+  | comp-assoc m g h => cases m idp
 
 -- 7. Определите \instance Monad для State и State'.
 
 \record State (S A : \Type)
   | state : S -> \Sigma S A
 
+\instance StateMonad (S : \Set) : Monad (State S)
+  | return => \lam a => \new State {
+    | state => \lam s => (s, a)
+  }
+  | >>= m f => \new State {
+    | state => \lam s0 => \let (s1, x) => state {m} s0 \in
+          state {f x} s1
+  }
+  | left-id a h => idp
+  | right-id m => idp
+  | comp-assoc m g h => idp
+
 \data State' (S A : \Type)
   | state' (S -> \Sigma S A)
+
+\func unstate' {S A : \Type} (s : State' S A) : S -> \Sigma S A => \case s \with {
+  | state' f => f
+}
+
+\func eta-equivalence {S A : \Type} (s : State' S A) : s = state' (unstate' s) \elim s
+  | state' f => idp
+
+
+\instance State'Monad (S : \Set) : Monad (State' S)
+  | return => \lam a => state' \lam s => (s, a)
+  | >>= m f => state' \lam s0 => \let (s1, x) => unstate' m s0 \in
+          unstate' (f x) s1
+  | left-id a h => rewriteI eta-equivalence idp
+  | right-id m => rewriteI eta-equivalence idp
+  | comp-assoc m g h => idp
