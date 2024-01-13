@@ -48,6 +48,25 @@
 
 -- 2. Докажите, что Perm l1 l2 тогда и только тогда, когда Insertion.sort l1 = Insertion.sort l2.
 
+\func perm<=>same-sorted {A : Dec} (l1 l2 : List A) : Perm l1 l2 <-> (Insertion.sort l1 = Insertion.sort l2) =>
+  (perm=>same-sorted l1 l2, same-sorted=>perm l1 l2)
+  \where {
+    \func perm=>same-sorted (l1 l2 : List A) (p : Perm l1 l2) : Insertion.sort l1 = Insertion.sort l2 \elim l1, l2, p
+      | nil, nil, perm-nil => idp
+      | x :: xs, y :: yx, perm-cons x=y perm-tails => pmap2 Insertion.sort.insert x=y $ perm=>same-sorted _ _ perm-tails
+      | l1, l2, perm-trans {zs} l1->zs zs->l2 => perm=>same-sorted l1 zs l1->zs *> perm=>same-sorted zs l2 zs->l2
+      | x :: (x' :: l3), y :: (y' :: l4), perm-swap p p1 p2 => rewrite (p, p1, p2) $ Insertion.sort-perm.insert-comm y' y $ Insertion.sort l4
+
+    \func same-sorted=>perm (l1 l2 : List A) (p : Insertion.sort l1 = Insertion.sort l2) : Perm l1 l2 =>
+      perm-trans (Insertion.sort-perm l1) $ rewrite p $ inv-perm (Insertion.sort-perm l2)
+
+    \func inv-perm {A : \Type} {l1 l2 : List A} (p : Perm l1 l2) : Perm l2 l1 \elim l1, l2, p
+      | nil, nil, perm-nil => perm-nil
+      | x :: l3, y :: l4, perm-cons p p1 => perm-cons (inv p) $ inv-perm p1
+      | l3, l4, perm-trans {zs} p1 p2 => perm-trans (inv-perm p2) (inv-perm p1)
+      | x :: (x' :: l3), y :: (y' :: l4), perm-swap p p1 p2 => rewrite (p, p1, p2) $ perm-swap idp idp idp
+  }
+
 -- 3. Докажите, что спецификация "результат является перестановкой входа и отсортирован" является полной для функции sort.
 
 \func completeness {A : Dec} (sort : List A -> List A) (l : List A) (p : Perm l (sort l)) (s : Sorted (sort l)) : sort l = Insertion.sort l =>
