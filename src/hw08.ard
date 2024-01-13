@@ -1,7 +1,8 @@
 \import Algebra.Meta
 \import Arith.Nat
 \import Data.Bool
-\import Data.List \hiding (headDef)
+\import Data.List
+\import Data.Or
 \import Function.Meta
 \import Logic.Meta
 \import Meta
@@ -10,6 +11,7 @@
 \import hw01 (fac)
 \import hw03 (*-comm)
 \import hw06 (<->, sublist-consume, sublist-nil, sublist-skip)
+\import lect02 (absurd)
 \import lect06 (filter)
 \import lect08
 \import Order.LinearOrder
@@ -69,8 +71,37 @@
 
 -- 3. Докажите, что спецификация "результат является перестановкой входа и отсортирован" является полной для функции sort.
 
-\func completeness {A : Dec} (sort : List A -> List A) (l : List A) (p : Perm l (sort l)) (s : Sorted (sort l)) : sort l = Insertion.sort l =>
-  {?}
+\func completeness {A : Dec} (sort : List A -> List A) (l : List A) (p : Perm l (sort l)) (s : Sorted (sort l)) : sort l = Insertion.sort l \elim l
+ | nil => perm-of-nil-is-nil nil idp p
+ | a :: l => \let | ss => inv $ perm<=>same-sorted.perm=>same-sorted _ _ p
+             \in sort-of-sorted-is-id _ s *> ss
+  \where {
+    \func perm-of-nil-is-nil {list : List A}  (isNil : List A) (indeedIsNill : isNil = nil) (perm : Perm isNil list) : list = nil
+      | nil, nil, indeedIsNill, perm-nil => idp
+      | nil, x :: isNil, (), perm
+      | y :: list, x :: isNil, (), perm
+      | list, isNil, idp, perm-trans {zs} perm1 perm2 => \let
+        | zs=nil => perm-of-nil-is-nil isNil idp perm1
+        | list=zs => perm-of-nil-is-nil zs zs=nil perm2
+        \in list=zs
+
+    \func sort-of-sorted-is-id (list : List A) (s : Sorted list) : list = Insertion.sort list \elim list, s
+      | nil, sorted-nil => idp
+      | x :: list, sorted-cons x<=head s => rewriteI (sort-of-sorted-is-id list s) $ insert-evaluates-trivially x list s x<=head
+      \where {
+        \func insert-evaluates-trivially {A : Dec} (x : A) (list : List A) (s : Sorted list) (x<=head : x <= headDef x list) : x :: list = Insertion.sort.insert x list =>
+          cases (list arg addPath) \with {
+            | nil, _ => idp
+            | y :: list', pppp => insert-evaluates-trivially-lemma x y list' (rewriteF pppp x<=head)
+          }
+          \where {
+            \func insert-evaluates-trivially-lemma {A : Dec} (x : A) (y : A) (list' : List A) (x<=y : x <= y) : x :: y :: list' = (\case dec<_<= y x \with {
+              | inl _ => y :: Insertion.sort.insert x list'
+              | inr _ => x :: y :: list'
+            }) => rewrite (dec<=_reduce x<=y) idp
+          }
+      }
+  }
 
 -- 4. Определите факториал через хвостовую рекурсию.
 --    Докажите, что он равен обычному определению факториала.
