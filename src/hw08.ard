@@ -8,6 +8,7 @@
 \import Meta
 \import Paths
 \import Paths.Meta
+\import Prelude
 \import hw01 (fac)
 \import hw03 (*-comm)
 \import hw06 (<->, sublist-consume, sublist-nil, sublist-skip)
@@ -125,11 +126,56 @@
 
 \data Paren | Left | Right
 
-\func isBalanced (xs : List Paren) : Bool => {?}
+\func isBalanced (xs : List Paren) : Bool => isBalanced-after-descent xs 0
+  \where {
+    -- The sequence starts at height `descent` and should go down by `descent` nesting levels
+    \func isBalanced-after-descent (xs : List Paren) (descent : Nat) : Bool \elim xs, descent
+      | nil, 0 => true
+      | nil, suc _ => false
+      | Left :: xs1, descent => isBalanced-after-descent xs1 (suc descent)
+      | Right :: _, 0 => false
+      | Right :: xs1, suc descent => isBalanced-after-descent xs1 descent
+  }
 
 \data Balanced (xs : List Paren) \with
   | nil => nil-balanced
   | :: Left xs => cons-balanced {ys : List Paren} (Balanced ys) (xs = ys ++ Right :: nil)
   | xs => append-balanced {ys zs : List Paren} (Balanced ys) (Balanced zs) (xs = ys ++ zs)
 
-\func isBalanced-correct (xs : List Paren) : (isBalanced xs = true) <-> Balanced xs => {?}
+\func isBalanced-correct (xs : List Paren) : (isBalanced xs = true) <-> Balanced xs => (isBalanced=>Balanced xs, \lam bal => Balanced=>isBalanced xs bal)
+  \where {
+    \func isBalanced=>Balanced (xs : List Paren) (isb : isBalanced xs = true) : Balanced xs => {?}
+
+    \func Balanced=>isBalanced (xs : List Paren) (bal : Balanced xs) : isBalanced xs = true \elim xs, bal
+      | nil, nil-balanced => idp
+      | Left :: xs1, cons-balanced bal p => rewrite p $ wrapped-isBalanced _ (Balanced=>isBalanced _ bal)
+      | xs1, append-balanced {ys} {zs} bal1 bal2 p => rewrite p $ append-is-balanced ys zs (Balanced=>isBalanced ys bal1) (Balanced=>isBalanced zs bal2)
+      \where {
+        \func append-is-balanced (xs ys : List Paren) (x-bal : isBalanced xs = true) (y-bal : isBalanced ys = true) : isBalanced (xs ++ ys) = true =>
+          append-is-balanced-after-descent 0 x-bal y-bal
+          \where {
+            \func append-is-balanced-after-descent {xs ys : List Paren}
+                                                   (descent : Nat)
+                                                   (xs-bad : isBalanced.isBalanced-after-descent xs descent = true)
+                                                   (ys-bal : isBalanced ys = true)
+              : isBalanced.isBalanced-after-descent (xs ++ ys) descent = true
+            \elim xs, descent, xs-bad
+              | nil, 0, xs-bad => ys-bal
+              | Left :: xs1, descent, xs-bad => append-is-balanced-after-descent _ xs-bad ys-bal
+              | Right :: xs1, suc descent, xs-bad => append-is-balanced-after-descent _ xs-bad ys-bal
+          }
+
+        \func wrapped-isBalanced (ys : List Paren) (bal : isBalanced ys = true) : isBalanced (Left :: (ys ++ Right :: nil)) = true =>
+            ++-right-balanced-after-descent-1 _ _ _
+          \where {
+            \func ++-right-balanced-after-descent-1 (xs : List Paren) (descent : Nat) (xs-bal : isBalanced.isBalanced-after-descent xs (suc descent) = true)
+              : isBalanced.isBalanced-after-descent (xs ++ Right :: nil) descent = true \elim xs, descent, xs-bal
+              | Left :: xs1, descent, xs-bal => ++-right-balanced-after-descent-1 xs1 (suc descent) xs-bal
+              | Right :: xs1, suc descent, xs-bal => ++-right-balanced-after-descent-1 xs1 descent xs-bal
+              | Right :: xs1, 0, xs-bal => \case xs-bal
+          }
+
+
+      }
+  }
+
