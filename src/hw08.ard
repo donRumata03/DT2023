@@ -1,8 +1,19 @@
+\import Algebra.Meta
+\import Arith.Nat
 \import Data.Bool
 \import Data.List \hiding (headDef)
-\import hw06
+\import Function.Meta
+\import Logic.Meta
+\import Meta
+\import Paths
+\import Paths.Meta
+\import hw01 (fac)
+\import hw03 (*-comm)
+\import hw06 (<->, sublist-consume, sublist-nil, sublist-skip)
+\import lect06 (filter)
 \import lect08
 \import Order.LinearOrder
+\open Nat
 \open LinearOrder
 
 -- 1. Реализуйте функцию filter и докажите ее корректность, то есть, что выполнены следующие условия:
@@ -10,28 +21,65 @@
 --    * Все элементы filter p xs удовлетворяют предикату p
 --    * Любой подсписок xs с тем же свойством является подсписком filter p xs
 
+\open hw06 (Sublist, filter-sublist)
+\open Sublist
+
+\data AllInList {A : \Type} (p : A -> Bool) (xs : List A) \elim xs
+  | nil => all-in-list-nil
+  | :: x xs => all-in-list-cons (p x = true) (AllInList p xs)
+
+\func filter-satisfies-p {A : \Type} (p : A -> Bool) (xs : List A) : AllInList p (filter p xs) \elim xs
+  | nil => all-in-list-nil
+  | a :: xs => cases (p a arg addPath) \with {
+    | false, p1 => filter-satisfies-p p xs
+    | true, p1 => all-in-list-cons p1 (filter-satisfies-p p xs)
+  }
+
+\func filter-includes-satisfying-sublists {A : \Type} (p : A -> Bool) (xs : List A) (l : List A) (sub : l `Sublist` xs) (sat : AllInList p xs) : l `Sublist` filter p xs \elim xs, l, sub, sat
+  | nil, nil, sublist-nil, all-in-list-nil => sublist-nil
+  | x :: xs, lh :: lt, sublist-consume lh=x sub, all-in-list-cons px=true sat => cases (p x arg addPath) \with {
+    | true, px=true' => sublist-consume lh=x $ filter-includes-satisfying-sublists p xs lt sub sat
+    | false, px=false => contradiction
+  }
+  | x :: xs, l, sublist-skip sub, all-in-list-cons p1 sat => cases (p x arg addPath) \with {
+    | true, px=true => sublist-skip $ filter-includes-satisfying-sublists p xs l sub sat
+    | false, px=false => contradiction
+  }
+
 -- 2. Докажите, что Perm l1 l2 тогда и только тогда, когда Insertion.sort l1 = Insertion.sort l2.
 
 -- 3. Докажите, что спецификация "результат является перестановкой входа и отсортирован" является полной для функции sort.
 
-\func completeness {A : Dec} (sort : List A -> List A) (l : List A) (p : Perm l (sort l)) (s : Sorted (sort l)) : sort l = Insertion.sort l
-  => {?}
+\func completeness {A : Dec} (sort : List A -> List A) (l : List A) (p : Perm l (sort l)) (s : Sorted (sort l)) : sort l = Insertion.sort l =>
+  {?}
 
 -- 4. Определите факториал через хвостовую рекурсию.
 --    Докажите, что он равен обычному определению факториала.
+
+\func factTail (n : Nat) : Nat => factAcc n 1
+  \where {
+    \func factAcc (n : Nat) (acc : Nat) : Nat \elim n
+      | zero => acc
+      | suc n => factAcc n (acc * suc n)
+  }
+
+\func factTail-correct : factTail = fac => ext $ (\lam n => evaluate n 1 *> *-comm)
+  \where {
+    \func evaluate (n : Nat) (acc : Nat) : factTail.factAcc n acc = acc * fac n \elim n
+      | 0 => idp
+      | suc n => \let ind => evaluate n (acc * suc n) \in ind *> rewrite (inv NatSemiring.*-assoc) idp
+  }
 
 -- 5. Определите функцию, которая проверяет правильность скобочной последовательности.
 --    Докажите ее корректность.
 
 \data Paren | Left | Right
 
-\func isBalanced (xs : List Paren) : Bool
-  => {?}
+\func isBalanced (xs : List Paren) : Bool => {?}
 
 \data Balanced (xs : List Paren) \with
   | nil => nil-balanced
   | :: Left xs => cons-balanced {ys : List Paren} (Balanced ys) (xs = ys ++ Right :: nil)
   | xs => append-balanced {ys zs : List Paren} (Balanced ys) (Balanced zs) (xs = ys ++ zs)
 
-\func isBalanced-correct (xs : List Paren) : (isBalanced xs = true) <-> Balanced xs
-  => {?}
+\func isBalanced-correct (xs : List Paren) : (isBalanced xs = true) <-> Balanced xs => {?}

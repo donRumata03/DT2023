@@ -95,6 +95,7 @@
 -- Можно сделать только одно из упражнений 7a,7b на выбор.
 -- 7a. Докажите, что (Bool = Bool) = Bool.
 
+-- There are exactly two bijections between 2-element
 \func BoolAut : (Bool = Bool) = Bool => ext {?}
 
 -- 7b. Докажите, что (n+m)-элементное множество равно размеченному объединению n- и m-элементных множеств.
