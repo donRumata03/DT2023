@@ -1,26 +1,69 @@
+\import Algebra.Meta
 \import Data.Bool
+\import Equiv
+\import Function.Meta
 \import Logic (<->)
+\import Meta
+\import Paths (*>, inv, pmap)
+\import Paths.Meta
+\import Set.Hedberg
 \import lect11
 
 -- 1. Докажите, что если A : \Prop, то Trunc A эквивалентен A.
 
-\func trunc-prop {A : \Prop} : Trunc A <-> A => {?}
+\func trunc-prop {A : \Prop} : Trunc A <-> A => (\lam t => \case t \with {
+  | trunc a => a
+}, \lam a => trunc a)
 
 -- 2. Докажите следующий закон де Моргана.
 
-\func deMorgan (A B C : \Prop) : (\Sigma A (B `Or` C)) <-> ((\Sigma A B) `Or` (\Sigma A C)) => {?}
+\func deMorgan (A B C : \Prop) : (\Sigma A (B `Or` C)) <-> ((\Sigma A B) `Or` (\Sigma A C)) =>
+  (\lam s => \case s.2 \with {
+    | inl a => inl (s.1, a)
+    | inr b => inr (s.1, b)
+  }, \lam o => \case o \with {
+    | inl s => (s.1, inl s.2)
+    | inr s => (s.1, inr s.2)
+  })
 
 -- 3. Определите элиминатор для Or через Or-rec, не используя паттерн матчинг на Or.
 
 \func Or-elim {A B : \Prop} (C : Or A B -> \Prop)
               (f : \Pi (x : A) -> C (inl x)) (g : \Pi (y : B) -> C (inr y))
-              (p : A `Or` B) : C p => {?}
+              (p : A `Or` B) : C p => Or-rec {_} {_} {C p} (\lam x => rewrite (Path.inProp p _) (f x)) (\lam y => rewrite (Path.inProp p _) (g y)) p
 
 -- 4. Докажите, что тип утверждений является множеством.
 
-\func prop-isSet : isSet \Prop => {?}
+\lemma prop-isSet : isSet \Prop =>
+    Set-lemma {\Prop}
+        (\lam P1 P2 => P1 <-> P2)
+        (\lam {P} => (\lam a => a, \lam a => a))
+        (\lam {P1} {P2} r => ext r)
+
 
 -- 5. Докажите, что функции Prop1-to-Prop2 и Prop2-to-Prop1 взаимно обратны и, как следствие, что Prop1 = Prop2.
+
+\lemma prop121' {P : \Prop} : Prop2-to-Prop1 (Prop1-to-Prop2 P) = P
+  => unfold Prop1-to-Prop2 $ unfold Prop2-to-Prop1 $ ext (\lam p => \case p \with {
+    | inc a => a
+  } , inc)
+
+\func prop212' {P : Prop2} : Prop1-to-Prop2 (Prop2-to-Prop1 P) = P
+  => unfold Prop1-to-Prop2 $ unfold Prop2-to-Prop1 $ ext (ext {?}, {?})
+  \where {
+    \func equiv => \new QEquiv {_} {_} {
+      | f => unwrap
+      | ret => inc
+      | ret_f => \scase \elim __ \with {
+        | inc a => pmap inc $ \peval unwrap (inc a)
+      }
+      | f_sec => \lam y => \peval unwrap (inc y)
+    }
+      \where {
+        \sfunc unwrap (p : Prop2-to-Prop1' P.1 P.2) : P.1 \elim p
+          | inc a => a
+      }
+  }
 
 -- Можно сделать только одно из упражнений 6a,6b на выбор.
 -- 6a. Тип С называется когенератором, если для любых множеств A и B и любых функция f,g : A -> B верно, что если h `o` f = h `o` g для всех h : B -> C, то f = g.
@@ -30,7 +73,15 @@
 
 \func isCogenerator (C : \Type) => \Pi {A B : \Set} (f g : A -> B) (p : \Pi (h : B -> C) -> h `o` f = h `o` g) -> f = g
 
-\func PropIsCogenerator : isCogenerator \Prop => {?}
+\func PropIsCogenerator : isCogenerator \Prop => \lam {A} {B} f g p => ext (\lam a =>
+    \let | h (b : B) => f a = b -- Unit when f a == b (because B is set), empty otherwise
+         | pp => unfold o $ pmap (\lam func => func a) $ p h
+         | hfa-is_unit : h (f a) => idp
+         | hga-is_unit : h (g a) => rewriteF pp hfa-is_unit
+         | is-fa-if-unit (b : B) (hb : h b) : b = f a => inv hb -- isSet B {?} {?} {?} {?}
+         | arg-same-if-unit (b1 : B) (b2 : B) (h1 : h b1) (h2 : h b2) : b1 = b2 => is-fa-if-unit b1 h1 *> (inv $ is-fa-if-unit b2 h2)
+    \in arg-same-if-unit (f a) (g a) hfa-is_unit hga-is_unit
+                                                                           )
 
 -- 6b. Тип X называется инъективным, если для любой функции f : A -> X и любой инъекции i : A -> B сущесвует функция l : B -> X такая, что l `o` i = f.
 --     Докажите, что \Prop инъективен.
@@ -44,6 +95,6 @@
 -- Можно сделать только одно из упражнений 7a,7b на выбор.
 -- 7a. Докажите, что (Bool = Bool) = Bool.
 
-\func BoolAut : (Bool = Bool) = Bool => {?}
+\func BoolAut : (Bool = Bool) = Bool => ext {?}
 
 -- 7b. Докажите, что (n+m)-элементное множество равно размеченному объединению n- и m-элементных множеств.
