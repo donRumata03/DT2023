@@ -65,11 +65,12 @@
   | \infixl 1 >>= {A B : \Set} : F A -> (A -> F B) -> F B -- Monadic laws
   | left-id {A B : \Set} (a : A) (h : A -> F B) : (return a >>= h) = h a
   | right-id {B : \Set} (m : F B) : (m  >>= return) = m
-  | comp-assoc {A B C : \Set} (m : F A) (g : A -> F B) (h : B -> F C) : ((m >>= g) >>= h) = (m >>= (\lam x => g x >>= h)) -- Implementation of fmap based on monad stuff and proof of its properties based on monadic laws
+  | comp-assoc {A B C : \Set} (m : F A) (g : A -> F B) (h : B -> F C) : ((m >>= g) >>= h) = (m >>= (\lam x => g x >>= h))
+
+  -- Implementation of fmap based on monad stuff and proof of its properties based on monadic laws:
   | fmap {A B : \Set} (func : A -> B) (f : F A) => f >>= \lam x => return $ func x
   | fmap-id m => unfold $ right-id m
-  | fmap-comp f g m => unfold $ {?}
---    ==< inv comp-assoc >== `qed
+  | fmap-comp f g m => pmap (m >>=) (ext \lam a => inv (left-id _ _)) *> inv (comp-assoc _ _ _)
 }
 
 -- 6. Определите \instance Monad для Maybe.
