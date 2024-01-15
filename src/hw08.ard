@@ -4,6 +4,7 @@
 \import Data.List
 \import Data.Or
 \import Function.Meta
+\import Logic (Not)
 \import Logic.Meta
 \import Meta
 \import Paths
@@ -26,6 +27,7 @@
 
 \open hw06 (Sublist, filter-sublist)
 \open Sublist
+\open NatSemiring (<)
 
 \data AllInList {A : \Type} (p : A -> Bool) (xs : List A) \elim xs
   | nil => all-in-list-nil
@@ -128,7 +130,8 @@
 
 \func isBalanced (xs : List Paren) : Bool => isBalanced-after-descent xs 0
   \where {
-    -- The sequence starts at height `descent` and should go down by `descent` nesting levels
+    -- The sequence starts at height `descent` and should go down by `descent` nesting levels by the end
+    -- While visiting only heights >= 0
     \func isBalanced-after-descent (xs : List Paren) (descent : Nat) : Bool \elim xs, descent
       | nil, 0 => true
       | nil, suc _ => false
@@ -142,10 +145,44 @@
   | :: Left xs => cons-balanced {ys : List Paren} (Balanced ys) (xs = ys ++ Right :: nil)
   | xs => append-balanced {ys zs : List Paren} (Balanced ys) (Balanced zs) (xs = ys ++ zs)
 
-\func isBalanced-correct (xs : List Paren) : (isBalanced xs = true) <-> Balanced xs => (isBalanced=>Balanced xs, \lam bal => Balanced=>isBalanced xs bal)
+\func isBalanced-correct (xs : List Paren) : (isBalanced xs = true) <-> Balanced xs => (isBalanced=>Balanced xs (suc $ length xs) linarith, Balanced=>isBalanced xs)
   \where {
-    \func isBalanced=>Balanced (xs : List Paren) (isb : isBalanced xs = true) : Balanced xs => {?}
+    \func isBalanced=>Balanced (xs : List Paren) (more-than-len : Nat) (has-small-len : length xs < more-than-len) (isb : isBalanced xs = true) : Balanced xs \elim xs, more-than-len
+      | nil, _ => nil-balanced
+      | a :: xs, suc m => \let | (l, r, plb, prb, pls, prs) => parse-first-paren-pair (a :: xs) isb (\lam x => contradiction)
+                        | balancedL => isBalanced=>Balanced l m (\let p => <_suc_<= has-small-len \in linarith) plb
+                        | balancedR => isBalanced=>Balanced r m (\let p => <_suc_<= has-small-len \in linarith) prb
+                        | raw => append-balanced {_} {Left :: l ++ Right :: nil} {r} (cons-balanced {_} balancedL idp) balancedR idp
+          \in rewrite (inv $ parse-splits' _ _ _, list-assoc-application _ _) raw
+      \where {
+        \func parse-first-paren-pair (xs : List Paren) (is-balanced : isBalanced xs = true) (not-nil : Not $ xs = nil)
+          : \Sigma (l : List Paren) (r : List Paren)
+                   (plb : isBalanced l = true) (prb : isBalanced r = true)
+                   (pls : length l < length xs) (prb : length r < length xs)
+          \elim xs, is-balanced, not-nil
+          | nil, is-balanced, p => contradiction
+          | Left :: xs1, is-balanced, p => aux xs1 0 is-balanced
+          \where {
+            \func aux (xs : List Paren) (target-descent : Nat) (isb : isBalanced.isBalanced-after-descent xs (suc target-descent) = true) :
+              \Sigma (l : List Paren) (r : List Paren)
+                     (plb : isBalanced.isBalanced-after-descent l target-descent = true) (prb : isBalanced r = true)
+                     (pls : length l < suc(length xs)) (prb : length r < suc (length xs))
+              | Right :: xs1, 0, isb => (nil, xs1, idp, isb, linarith, linarith)
+              | Left :: xs1, target-descent, isb => \let (l, r, plb, prb, pls, prs) => aux xs1 (suc target-descent) isb \in (Left :: l, r, plb, prb, linarith, linarith)
+              | Right :: xs1, suc target-descent, isb => \let (l, r, plb, prb, pls, prs) => aux xs1 target-descent isb \in (Right :: l, r, plb, prb, linarith, linarith)
+          }
 
+        \func parse-splits' (a : Paren) (xs : List Paren) (isb : isBalanced (a :: xs) = true) : Left :: (parse-first-paren-pair (a :: xs) isb (\lam x => contradiction)).1 ++ Right :: (parse-first-paren-pair (a :: xs) isb (\lam x => contradiction)).2 = (a :: xs)
+          | Left, xs1, isb1 => pmap ((::) Left) $ parse-splits xs1 0 isb1
+
+        \func parse-splits (xs : List Paren) (target-descent : Nat) (isb : isBalanced.isBalanced-after-descent xs (suc target-descent) = true)
+          : (parse-first-paren-pair.aux xs target-descent isb).1 ++ Right :: (parse-first-paren-pair.aux xs _ isb).2 = xs
+          | Left :: xs1, target-descent, isb1 => \let rec => parse-splits xs1 (suc target-descent) isb1 \in pmap ((::) Left) rec
+          | Right :: xs1, 0, isb1 => idp
+          | Right :: xs1, suc target-descent, isb1 => pmap ((::) Right) $ parse-splits xs1 target-descent isb1
+
+        \func list-assoc-application (xs ys : List Paren) : Left :: xs ++ Right :: ys = (Left :: xs ++ Right :: nil) ++ ys => equation
+      }
     \func Balanced=>isBalanced (xs : List Paren) (bal : Balanced xs) : isBalanced xs = true \elim xs, bal
       | nil, nil-balanced => idp
       | Left :: xs1, cons-balanced bal p => rewrite p $ wrapped-isBalanced _ (Balanced=>isBalanced _ bal)
@@ -166,13 +203,15 @@
           }
 
         \func wrapped-isBalanced (ys : List Paren) (bal : isBalanced ys = true) : isBalanced (Left :: (ys ++ Right :: nil)) = true =>
-            ++-right-balanced-after-descent-1 _ _ _
+            ++-right-balanced-after-descent-1 ys 0 bal
           \where {
-            \func ++-right-balanced-after-descent-1 (xs : List Paren) (descent : Nat) (xs-bal : isBalanced.isBalanced-after-descent xs (suc descent) = true)
-              : isBalanced.isBalanced-after-descent (xs ++ Right :: nil) descent = true \elim xs, descent, xs-bal
+            \func ++-right-balanced-after-descent-1 (xs : List Paren) (descent : Nat) (xs-bal : isBalanced.isBalanced-after-descent xs descent = true)
+              : isBalanced.isBalanced-after-descent (xs ++ Right :: nil) (suc descent) = true \elim xs, descent, xs-bal
+              | nil, 0, xs-bal => idp
+              | nil, suc descent, xs-bal => contradiction
               | Left :: xs1, descent, xs-bal => ++-right-balanced-after-descent-1 xs1 (suc descent) xs-bal
               | Right :: xs1, suc descent, xs-bal => ++-right-balanced-after-descent-1 xs1 descent xs-bal
-              | Right :: xs1, 0, xs-bal => \case xs-bal
+              | Right :: xs1, 0, xs-bal => contradiction
           }
 
 
