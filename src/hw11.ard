@@ -1,10 +1,11 @@
 \import Algebra.Meta
 \import Data.Bool
 \import Equiv
+\import Equiv.Univalence
 \import Function.Meta
 \import Logic (<->)
 \import Meta
-\import Paths (*>, inv, pmap)
+\import Paths (*>, inv, pmap, setPath)
 \import Paths.Meta
 \import Set.Hedberg
 \import lect11
@@ -96,6 +97,32 @@
 -- 7a. Докажите, что (Bool = Bool) = Bool.
 
 -- There are exactly two bijections between 2-element
-\func BoolAut : (Bool = Bool) = Bool => ext {?}
+\func BoolAut : (Bool = Bool) = Bool => ext \new QEquiv {
+  | f => eq-to-bool
+  | ret => bool-to-eq
+  | ret_f => \lam x => cases (=-to-Equiv x arg addPath) \with {
+    | (f,ret,ret_f,sec,f_sec), p => cases (f true arg addPath) \with {
+        | false, pp => unfold eq-to-bool $ rewrite (p, pp) {?}
+        | true, pp => unfold eq-to-bool $ rewrite (p, pp) \let | f_false=false => {?} \in {?}
+      }
+
+  }
+  | f_sec => \lam y => cases y \with {
+    | false => {?}
+    | true => idp
+  }
+}
+  \where {
+    \func eq-to-bool (eq : Bool = Bool) : Bool => =-to-Equiv eq $ true
+
+    \func bool-to-eq (b : Bool) : Bool = Bool
+      | false => {-Equiv-to-= $ -}path (iso not not not-not not-not) -- \new QEquiv {
+--        | f => not
+--        | ret => not
+--        | ret_f => not-not
+--        | f_sec => not-not
+--      }
+      | true => idp
+  }
 
 -- 7b. Докажите, что (n+m)-элементное множество равно размеченному объединению n- и m-элементных множеств.
