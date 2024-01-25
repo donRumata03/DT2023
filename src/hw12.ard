@@ -1,10 +1,11 @@
 \import Arith.Nat
+\import Data.List
 \import Function.Meta
 \import Logic
 \import Meta
 \import Paths
 \import Paths.Meta
-\import hw06 (contrProp)
+\import hw06 (In, contrProp)
 \import lect05
 \import lect12
 
@@ -86,7 +87,8 @@
 
 -- 7. Определите множество конечных подмножеств множества A, то есть списков элементов A с точностью до перестановок и повторений элементов.
 
-\data Set (A : \Set) : \Set
+\func Set (A : \Set) : \Set => Quotient (List A) (\lam xs ys => \Pi (x : A) -> (TruncP $ In x xs) <-> (TruncP $ In x ys))
+
 
 -- 8. Докажите теорему Кантора.
 
