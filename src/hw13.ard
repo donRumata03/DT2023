@@ -1,5 +1,13 @@
 \import Data.Bool
-\import lect12(isInj)
+\import Data.List
+\import Equiv.Univalence
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Paths
+\import Paths.Meta
+\import lect12(equals~, in~, isInj)
 \import lect13
 
 -- 1. Докажите, что add x (add x s) = add x s и add x (add y s) = add y (add x s)
@@ -22,9 +30,29 @@
 
 -- 4. Определите функцию isEmpty для произвольного конечного множества и для ListSet.
 
-\func isEmptySet {S : FinSetSpec} (x : S) : Bool => {?}
+\func isEmptySet {S : FinSetSpec} (x : S) : Bool => isEmptyListSet {S.A} $ =-to-Equiv (inv listSet=Set) x
 
-\func isEmptyListSet {A : \Set} (x : ListSet A) : Bool => {?}
+\func cons!=_list-nil {A : \Set} {a : A} {l : List A} (eq : EqList (a :: l) nil) : Empty =>
+  \let (p->, p<-) => eq a | a-in-a::l : In a (a :: l) => In.here {A} idp
+  \in \case p-> a-in-a::l
+
+\func nil!=_list-cons {A : \Set} {a : A} {l : List A} (eq : EqList nil (a :: l)) : Empty =>
+  \let (p->, p<-) => eq a | a-in-a::l : In a (a :: l) => In.here {A} idp
+  \in \case p<- a-in-a::l
+
+
+\func isEmptyListSet {A : \Set} (x : ListSet A) : Bool => \case x \with {
+  | in~ a => \case a \with {
+    | nil => true
+    | a1 List.:: l => false
+  }
+  | equals~ {a} {a'} r => cases (a arg addPath, a' arg addPath) \with {
+    | nil, p, nil, p1 => idp
+    | nil, p, a1 :: x1, p1 => absurd $ nil!=_list-cons $ rewriteF (p, p1) r
+    | a1 :: x1, p, nil, p1 => absurd $ cons!=_list-nil $ rewriteF (p, p1) r
+    | a1 :: x1, p, a2 :: x2, p1 => idp
+  }
+}
 
 -- 5. Определите функцию union {A : \Set} : S -> S -> S для произвольного S (удовлетворяющего FinSetSpec) и для ListSet.
 
