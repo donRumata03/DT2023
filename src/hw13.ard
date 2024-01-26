@@ -7,26 +7,38 @@
 \import Meta
 \import Paths
 \import Paths.Meta
-\import lect12(equals~, in~, isInj)
+\import lect12 (equals~, in~, isInj)
 \import lect13
 
 -- 1. Докажите, что add x (add x s) = add x s и add x (add y s) = add y (add x s)
 
-\func add-idemp {S : SetSpec} (x : S.A) (s : S) : add x (add x s) = add x s
-  => {?}
+\func add-idemp {S : SetSpec} (x : S.A) (s : S) : add x (add x s) = add x s => setExt (\lam a => (
+  \lam is-elem => \let hmm => add-univ is-elem \in \case hmm \with {
+    | byLeft a1 => rewrite a1 add-head
+    | byRight b => b
+  },
+  add-tail
+))
 
-\func add-swap {S : SetSpec} (x y : S.A) (s : S) : add x (add y s) = add y (add x s)
-  => {?}
+\func add-swap {S : SetSpec} (x y : S.A) (s : S) : add x (add y s) = add y (add x s) => setExt (\lam a => (add-swap-lemma a x y s, add-swap-lemma a y x s))
+  \where {
+    \func add-swap-lemma {S : SetSpec} (a : S.A) (x y : S.A) (s : S.S) : S.isElem a (S.add x (S.add y s)) -> S.isElem a (S.add y (S.add x s)) =>
+      \lam in-straight => \let reason => add-univ in-straight \in \case reason \with {
+        | byLeft a=x => add-tail {S} {_} {_} {_} $ rewrite a=x add-head
+        | byRight in-tail => \let reason' => add-univ in-tail \in \case reason' \with {
+          | byLeft a=y => rewrite a=y add-head
+          | byRight in-tail' => add-tail $ add-tail in-tail'
+        }
+      }
+  }
 
 -- 2. Докажите, что множество подмножеств является инстансом SetSpec
 
-\func subsets {A : \Set} : SetSpec {A} (A -> \Prop)
-  => {?}
+\func subsets {A : \Set} : SetSpec {A} (A -> \Prop) => {?}
 
 -- 3. Докажите, что множество подмножеств является наибольшим инстансом, то есть любой другой вкладывается в него.
 
-\func subsets-largest (S : SetSpec) : \Sigma (f : S -> (S.A -> \Prop)) (isInj f)
-  => {?}
+\func subsets-largest (S : SetSpec) : \Sigma (f : S -> (S.A -> \Prop)) (isInj f) => {?}
 
 -- 4. Определите функцию isEmpty для произвольного конечного множества и для ListSet.
 
@@ -39,7 +51,6 @@
 \func nil!=_list-cons {A : \Set} {a : A} {l : List A} (eq : EqList nil (a :: l)) : Empty =>
   \let (p->, p<-) => eq a | a-in-a::l : In a (a :: l) => In.here {A} idp
   \in \case p<- a-in-a::l
-
 
 \func isEmptyListSet {A : \Set} (x : ListSet A) : Bool => \case x \with {
   | in~ a => \case a \with {
