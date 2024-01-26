@@ -1,10 +1,17 @@
 \import Data.Maybe
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Paths.Meta
 \import lect06 (Decide)
 \import lect09
 
 -- 1. Определите отношение многошаговой редукции на Term.
 
-\func Red {V : \Set} (t s : Term V) : \Type => {?}
+\data Red {V : \Set} (t s : Term V)
+  | red-refl (t = s)
+  | red-trans-cl {intermediate : Term V} (r1 : Red t intermediate) (r2 : Red intermediate s)
 
 -- 2. Стратегия редукции -- это функция, которая каждому терму сопоставляет либо некоторый терм, к которому он редуцируется за 1 шаг, либо доказательство, что таких термов нет.
 --    Определите любую стратегию редукции.
@@ -13,19 +20,27 @@
 
 -- 3. Докажите, что подтермы достижимого терма достижимы.
 
-\func appAccLeft {V : \Set} {t s : Term V} (a : Acc Red1 (app t s)) : Acc Red1 t
-  => {?}
+-- Query a about reductions inside left app part
+\func appAccLeft {V : \Set} {t s : Term V} (a : Acc Red1 (app t s)) : Acc Red1 t \elim a
+  | acc p => acc (\lam {t'} r => appAccLeft {_} {t'} {s} (p $ red-left r idp))
 
-\func appAccRight {V : \Set} {t s : Term V} (a : Acc Red1 (app t s)) : Acc Red1 s
-  => {?}
 
-\func subLamAcc {V : \Set} {t : Term (Maybe V)} (a : Acc Red1 (lam t)) : Acc Red1 t
-  => {?}
+\func appAccRight {V : \Set} {t s : Term V} (a : Acc Red1 (app t s)) : Acc Red1 s \elim a
+  | acc p => acc (\lam {s'} r => appAccRight {_} {t} {s'} (p $ red-right idp r))
+
+
+\func subLamAcc {V : \Set} {t : Term (Maybe V)} (a : Acc Red1 (lam t)) : Acc Red1 t \elim a
+  | acc p => acc (\lam {t'} r => subLamAcc {_} (p $ red-lam r))
+
 
 -- 4. Докажите, что нейтральные термы замкнуты относительно редукций.
 
 \func neutralRed {V : \Set} {t s : Term V} (r : Red1 t s) (n : Neutral t) : Neutral s
-  => {?}
+  | {V}, {app t t1}, beta p p1, app-neutral n a => absurd $ \let lam-neutral => rewriteF p n \in contradiction {usingOnly lam-neutral}
+  | {V}, {app tl tr}, {app sl sr}, red-left r idp, app-neutral n a => app-neutral (neutralRed r n) a
+  | {V}, {app t t1}, {app s s1}, red-right idp r, app-neutral n a => app-neutral n $ \case a \with {
+    | acc _x => _x {s1} r
+  }
 
 -- 5. Докажите следующую обобщенную лемму о подстановке и выведите из нее обычную версию: если Г, x : A |- b : B и Г |- a : A, то Г |- b[a/x] : B.
 
