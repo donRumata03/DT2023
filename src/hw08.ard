@@ -9,11 +9,9 @@
 \import Meta
 \import Paths
 \import Paths.Meta
-\import Prelude
 \import hw01 (fac)
 \import hw03 (*-comm)
 \import hw06 (<->, sublist-consume, sublist-nil, sublist-skip)
-\import lect02 (absurd)
 \import lect06 (filter)
 \import lect08
 \import Order.LinearOrder
