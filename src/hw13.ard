@@ -34,7 +34,16 @@
 
 -- 2. Докажите, что множество подмножеств является инстансом SetSpec
 
-\func subsets {A : \Set} : SetSpec {A} (A -> \Prop) => {?}
+\func subsets {A : \Set} : SetSpec {A} (A -> \Prop) => \new SetSpec {
+  | empty => \lam a => Empty
+  | add x s => \lam a => (a = x) || s a
+  | isElem a s => s a
+  | setExt p => ext (\lam a => ext $ p a)
+  | add-head => byLeft idp
+  | add-tail p => byRight p
+  | add-univ in-all => in-all
+  | empty-univ => contradiction
+}
 
 -- 3. Докажите, что множество подмножеств является наибольшим инстансом, то есть любой другой вкладывается в него.
 
