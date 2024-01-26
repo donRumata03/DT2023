@@ -9,7 +9,7 @@
 \import Paths
 \import Paths.Meta
 \import lect05 (unext)
-\import lect12 (equals~, in~, isInj)
+\import lect12 (equals~, in~, isInj, quotientEq)
 \import lect13
 
 -- 1. Докажите, что add x (add x s) = add x s и add x (add y s) = add y (add x s)
@@ -58,7 +58,11 @@
 
 -- 4. Определите функцию isEmpty для произвольного конечного множества и для ListSet.
 
-\func isEmptySet {S : FinSetSpec} (x : S) : Bool => isEmptyListSet {S.A} $ =-to-Equiv (inv listSet=Set) x
+-- To use for defining operations on abstract sets via isomorphism
+\func list-to-abstract-set {S : FinSetSpec} (x : ListSet S.A) : S => =-to-Equiv listSet=Set x
+\func abstract-set-to-list {S : FinSetSpec} (x : S) : ListSet S.A => =-to-Equiv (inv listSet=Set) x
+
+\func isEmptySet {S : FinSetSpec} (x : S) : Bool => isEmptyListSet {S.A} $ abstract-set-to-list x
 
 \func cons!=_list-nil {A : \Set} {a : A} {l : List A} (eq : EqList (a :: l) nil) : Empty =>
   \let (p->, p<-) => eq a | a-in-a::l : In a (a :: l) => In.here {A} idp
@@ -82,6 +86,12 @@
 }
 
 -- 5. Определите функцию union {A : \Set} : S -> S -> S для произвольного S (удовлетворяющего FinSetSpec) и для ListSet.
+\func union {S : FinSetSpec} (x y : S) : S => list-to-abstract-set $ unionListSet (abstract-set-to-list x) (abstract-set-to-list y)
+
+\func unionListSet {A : \Set} (x y : ListSet A) : ListSet A
+  | in~ y', in~ x' => in~ (x' ++ y')
+  | in~ a, equals~ r => quotientEq (\lam x => {?})
+  | equals~ r, in~ a1 => quotientEq {?}
 
 -- 6. Определите функцию intersection {A : DecSet} : S -> S -> S для произвольного S (удовлетворяющего FinSetSpec) и для ListSet.
 
